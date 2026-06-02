@@ -417,275 +417,432 @@
 </footer>
 
 <script>
-// Registrar el plugin de etiquetas globalmente
 Chart.register(ChartDataLabels);
+Chart.defaults.font = { family:"'Segoe UI', system-ui, sans-serif", size:11 };
+Chart.defaults.color = '#718096';
+Chart.defaults.plugins.datalabels = { display: false };
 
 const navy='#1B3A6B', green='#00A86B', orange='#F4A261', red='#E63946', yellow='#F9C74F';
 
-Chart.defaults.font = { family:"'Segoe UI', system-ui, sans-serif", size:11 };
-Chart.defaults.color = '#718096';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1725197522&single=true&output=csv';
 
-// Desactivar datalabels por defecto en todos los charts; cada uno los activa explícitamente
-Chart.defaults.plugins.datalabels = { display: false };
+/*
+  FORMATO ESPERADO EN GOOGLE SHEETS — columnas: seccion, etiqueta, v1, v2, v3, v4, v5
+  ──────────────────────────────────────────────────────────────────────────────────────
+  seccion        | etiqueta          | v1      | v2     | v3 | v4 | v5
+  ventas         | Ene               | 99845   | 507807 |    |    |
+  ventas         | Feb               | 91381   | 551951 |    |    |
+  ... (12 meses; v1 = ventas muestra, v2 = gastos operativos del mes)
+  gastos         | Nomina            | 4284499 |        |    |    |
+  gastos         | Renta             | 1200082 |        |    |    |
+  gastos         | Marketing         | 358344  |        |    |    |
+  gastos         | Electricidad      | 291840  |        |    |    |
+  gastos         | Mantenimiento     | 192347  |        |    |    |
+  foodcost       | Postres           | 23.3    |        |    |    |
+  foodcost       | Cervezas          | 41.2    |        |    |    |
+  ... (una fila por categoría, ordenadas de menor a mayor food cost)
+  calificaciones | 6                 | 166     |        |    |    |
+  calificaciones | 7                 | 168     |        |    |    |
+  calificaciones | 8                 | 161     |        |    |    |
+  calificaciones | 9                 | 158     |        |    |    |
+  calificaciones | 10                | 147     |        |    |    |
+  nps            | Global            | 17      |        |    |    |
+  nps            | Centro            | 12      |        |    |    |
+  nps            | Angelópolis       | 23      |        |    |    |
+  nps            | Benchmark         | 52      |        |    |    |
+  espera         | Global            | 22      |        |    |    |
+  espera         | Centro            | 21      |        |    |    |
+  espera         | Angelópolis       | 22      |        |    |    |
+  espera         | Óptimo            | 15      |        |    |    |
+  productos      | Rib Eye           | 266973  |        |    |    |
+  ... (una fila por producto, de mayor a menor venta)
+  demo           | Puebla (303)      | 74      | 59     | 59 | 64 | 47
+  demo           | Cholula (93)      | 25      | 16     | 18 | 20 | 14
+  demo           | S.A.Cholula (53)  | 13      | 11     | 11 | 12 | 6
+  demo           | Atlixco (51)      | 10      | 11     | 9  | 8  | 13
+  ... (v1..v5 = grupos de edad 18-30, 31-40, 41-50, 51-60, 61+)
+*/
 
-// ── 1. VENTAS VS GASTOS ──
-new Chart(document.getElementById('ventasGastos'), {
-  type: 'bar',
-  data: {
-    labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
-    datasets: [
-      {
-        label: 'Ventas (muestra)',
-        data: [99845,91381,98902,107991,92897,83940,105379,95123,88490,94766,93118,92828],
-        backgroundColor: green+'99', borderColor: green, borderWidth:2, borderRadius:5, yAxisID:'y'
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const PROD_COLORS = [red, orange, green, navy+'cc', '#9B5DE5', '#00BBF9', '#F9C74F'];
+const BAND_COLORS = [green, '#00BBF9', yellow, orange, red];
+const BAND_LABELS = ['18-30','31-40','41-50','51-60','61+'];
+
+// Datos de respaldo — se usan si el CSV no carga o le faltan secciones
+const DEF = {
+  ventas:  [99845,91381,98902,107991,92897,83940,105379,95123,88490,94766,93118,92828],
+  gastos:  [507807,551951,556981,535314,521411,518498,528589,523998,526838,521494,537102,497129],
+  gastosLabels: ['Nómina','Renta','Marketing','Electricidad','Mantenimiento'],
+  gastosVals:   [4284499,1200082,358344,291840,192347],
+  fcCats:  ['Postres','Bebidas','Plato Fuerte','Pastas','Sopas','Hamburguesas','Ensaladas','Entradas','Vinos','Cervezas','Cortes'],
+  fcVals:  [23.3,25.8,32.2,31.5,32.4,34.4,37.5,38.6,38.9,41.2,44.2],
+  cal:     [166,168,161,158,147],
+  nps:     [17,12,23,52],
+  espera:  [22,21,22,15],
+  prodLabels: ['Rib Eye','Hamburguesa','Pasta Alfredo','Tacos','Nachos','Vino Copa','Ensalada César'],
+  prodVals:   [266973,141876,110646,108328,77532,76326,70868],
+  demoLabels: ['Puebla\n(303)','Cholula\n(93)','S.A. Cholula\n(53)','Atlixco\n(51)'],
+  demoTotals: [303,93,53,51],
+  demoBands:  [[74,59,59,64,47],[25,16,18,20,14],[13,11,11,12,6],[10,11,9,8,13]]
+};
+
+// ── UI ─────────────────────────────────────────────────────────
+function showLoader(on) {
+  let el = document.getElementById('_loader');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_loader';
+    el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:4px;background:linear-gradient(90deg,#00A86B,#1B3A6B);z-index:9999;transition:opacity .4s;';
+    document.head.insertAdjacentHTML('beforeend', '<style>@keyframes _lpulse{0%,100%{opacity:.5}50%{opacity:1}}#_loader{animation:_lpulse .8s ease-in-out infinite}</style>');
+    document.body.prepend(el);
+  }
+  el.style.opacity = on ? '1' : '0';
+}
+
+function showError(msg) {
+  let el = document.getElementById('_err');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_err';
+    el.style.cssText = 'background:#FFF5F5;border:2px solid #E63946;border-radius:10px;padding:14px 20px;margin:0 0 20px;font-size:.82rem;color:#C0392B;line-height:1.6;';
+    document.querySelector('.container').prepend(el);
+  }
+  el.innerHTML = `⚠️ <strong>Error al cargar datos desde Google Sheets:</strong> ${msg}<br>
+    <span style="color:#718096;font-size:.76rem">Se muestran los últimos datos guardados como referencia. Verifica que la hoja esté publicada como CSV y que las columnas sigan el formato indicado en el código.</span>`;
+}
+
+// ── CSV PARSER ─────────────────────────────────────────────────
+function csvSplitLine(line) {
+  const res = []; let cur = ''; let inQ = false;
+  for (const c of line) {
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { res.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  res.push(cur);
+  return res;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = csvSplitLine(lines[0]).map(h => h.trim().toLowerCase());
+  return lines.slice(1).map(line => {
+    const vals = csvSplitLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+}
+
+// ── DATA MAPPING ───────────────────────────────────────────────
+function mapRows(rows) {
+  const n = s => parseFloat((s || '').replace(/[$,%\s]/g, '')) || 0;
+  const D = JSON.parse(JSON.stringify(DEF));
+
+  const by = {};
+  rows.forEach(r => {
+    const sec = (r.seccion || '').toLowerCase().trim();
+    if (!by[sec]) by[sec] = [];
+    by[sec].push(r);
+  });
+
+  if (by['ventas']) {
+    const vm = {}, gm = {};
+    by['ventas'].forEach(r => { const e = (r.etiqueta||'').trim(); vm[e]=n(r.v1); if(r.v2) gm[e]=n(r.v2); });
+    MONTHS.forEach((m,i) => { if (vm[m] !== undefined) D.ventas[i]=vm[m]; if (gm[m] !== undefined) D.gastos[i]=gm[m]; });
+  }
+
+  if (by['gastos']) {
+    const labels=[], vals=[];
+    by['gastos'].forEach(r => { labels.push((r.etiqueta||'').trim()); vals.push(n(r.v1)); });
+    if (labels.length) { D.gastosLabels=labels; D.gastosVals=vals; }
+  }
+
+  if (by['foodcost']) {
+    const cats=[], fv=[];
+    by['foodcost'].forEach(r => { cats.push((r.etiqueta||'').trim()); fv.push(n(r.v1)); });
+    if (cats.length) { D.fcCats=cats; D.fcVals=fv; }
+  }
+
+  if (by['calificaciones']) {
+    const cm={};
+    by['calificaciones'].forEach(r => { cm[(r.etiqueta||'').trim()]=n(r.v1); });
+    [6,7,8,9,10].forEach((k,i) => { if (cm[String(k)]!==undefined) D.cal[i]=cm[String(k)]; });
+  }
+
+  if (by['nps']) {
+    const nm={};
+    by['nps'].forEach(r => { nm[(r.etiqueta||'').trim().toLowerCase()]=n(r.v1); });
+    if (nm['global']!==undefined)    D.nps[0]=nm['global'];
+    if (nm['centro']!==undefined)    D.nps[1]=nm['centro'];
+    const ang = nm['angelópolis']??nm['angelopolis'];
+    if (ang!==undefined)             D.nps[2]=ang;
+    if (nm['benchmark']!==undefined) D.nps[3]=nm['benchmark'];
+  }
+
+  if (by['espera']) {
+    const em={};
+    by['espera'].forEach(r => { em[(r.etiqueta||'').trim().toLowerCase()]=n(r.v1); });
+    if (em['global']!==undefined)    D.espera[0]=em['global'];
+    if (em['centro']!==undefined)    D.espera[1]=em['centro'];
+    const ang = em['angelópolis']??em['angelopolis'];
+    if (ang!==undefined)             D.espera[2]=ang;
+    const opt = em['óptimo']??em['optimo'];
+    if (opt!==undefined)             D.espera[3]=opt;
+  }
+
+  if (by['productos']) {
+    const pl=[], pv=[];
+    by['productos'].forEach(r => { pl.push((r.etiqueta||'').trim()); pv.push(n(r.v1)); });
+    if (pl.length) { D.prodLabels=pl; D.prodVals=pv; }
+  }
+
+  if (by['demo']) {
+    const dl=[], dt=[], db=[];
+    by['demo'].forEach(r => {
+      const etq=(r.etiqueta||'').trim();
+      const m=etq.match(/\((\d+)\)/);
+      const tot=m?parseInt(m[1]):0;
+      dl.push(etq.replace(/\s*\(\d+\)/,'').trim()+'\n('+(tot||'?')+')');
+      dt.push(tot);
+      db.push([n(r.v1),n(r.v2),n(r.v3),n(r.v4),n(r.v5)]);
+    });
+    if (dl.length) { D.demoLabels=dl; D.demoTotals=dt; D.demoBands=db; }
+  }
+
+  return D;
+}
+
+// ── CHARTS ─────────────────────────────────────────────────────
+let _charts = {};
+
+function buildCharts(D) {
+  Object.values(_charts).forEach(c => c.destroy());
+  _charts = {};
+
+  const gastosTotal = D.gastosVals.reduce((a,b)=>a+b,0);
+  const calTotal    = D.cal.reduce((a,b)=>a+b,0);
+  const fcColors    = D.fcVals.map(v => v<=32?green:v<=38?yellow:red);
+  const npsMax      = Math.max(...D.nps)*1.3;
+  const esperaMax   = Math.max(...D.espera)*1.3;
+  const prodMax     = Math.max(...D.prodVals)*1.22;
+
+  // 1 — VENTAS VS GASTOS
+  _charts.vg = new Chart(document.getElementById('ventasGastos'), {
+    type:'bar',
+    data:{
+      labels: MONTHS,
+      datasets:[
+        { label:'Ventas (muestra)', data:D.ventas,
+          backgroundColor:green+'99', borderColor:green, borderWidth:2, borderRadius:5, yAxisID:'y' },
+        { label:'Gastos Operativos Totales', data:D.gastos,
+          type:'line', borderColor:red, backgroundColor:red+'18', borderWidth:2.5,
+          fill:true, tension:.35, pointRadius:4, pointBackgroundColor:red, yAxisID:'y' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-MX')}` } },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===0,
+          anchor:'end', align:'top', offset:2,
+          formatter:v=>'$'+(v/1000).toFixed(0)+'K',
+          font:{ size:9, weight:'600' }, color:'#1B6B47'
+        }
       },
-      {
-        label: 'Gastos Operativos Totales',
-        data: [507807,551951,556981,535314,521411,518498,528589,523998,526838,521494,537102,497129],
-        type: 'line', borderColor: red, backgroundColor: red+'18', borderWidth:2.5,
-        fill:true, tension:.35, pointRadius:4, pointBackgroundColor:red, yAxisID:'y'
-      }
-    ]
-  },
-  options: {
-    responsive:true, maintainAspectRatio:true,
-    interaction:{ mode:'index', intersect:false },
-    plugins: {
-      legend:{ position:'top' },
-      tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-MX')}` } },
-      datalabels: {
-        display: ctx => ctx.datasetIndex === 0,
-        anchor:'end', align:'top', offset:2,
-        formatter: v => '$'+(v/1000).toFixed(0)+'K',
-        font:{ size:9, weight:'600' }, color: '#1B6B47'
-      }
+      scales:{ y:{ ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 2 — GASTOS DONUT
+  _charts.gd = new Chart(document.getElementById('gastosDonut'), {
+    type:'doughnut',
+    data:{
+      labels: D.gastosLabels,
+      datasets:[{ data:D.gastosVals,
+        backgroundColor:[navy,orange,green,'#9B5DE5','#00BBF9'],
+        borderWidth:3, borderColor:'#fff', hoverOffset:8 }]
     },
-    scales:{ y:{ ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
-  }
-});
-
-// ── 2. GASTOS DONUT ──
-new Chart(document.getElementById('gastosDonut'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Nómina','Renta','Marketing','Electricidad','Mantenimiento'],
-    datasets:[{
-      data: [4284499,1200082,358344,291840,192347],
-      backgroundColor:[navy,orange,green,'#9B5DE5','#00BBF9'],
-      borderWidth:3, borderColor:'#fff', hoverOffset:8
-    }]
-  },
-  options: {
-    responsive:true, maintainAspectRatio:true,
-    plugins: {
-      legend:{ position:'bottom', labels:{ padding:12, boxWidth:12 } },
-      tooltip:{ callbacks:{ label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('es-MX')} (${((ctx.parsed/6327113)*100).toFixed(1)}%)` } },
-      datalabels: {
-        display: true,
-        formatter:(v,ctx) => {
-          const pct = ((v/6327113)*100).toFixed(1);
-          return pct+'%';
-        },
-        color:'#fff', font:{ size:11, weight:'700' },
-        textShadowColor:'rgba(0,0,0,0.4)', textShadowBlur:4
-      }
-    },
-    cutout:'58%'
-  }
-});
-
-// ── 3. FOOD COST POR CATEGORÍA ──
-const fcCats = ['Postres','Bebidas','Plato Fuerte','Pastas','Sopas','Hamburguesas','Ensaladas','Entradas','Vinos','Cervezas','Cortes'];
-const fcVals = [23.3,25.8,32.2,31.5,32.4,34.4,37.5,38.6,38.9,41.2,44.2];
-const fcColors = fcVals.map(v => v<=32 ? green : v<=38 ? yellow : red);
-
-new Chart(document.getElementById('foodCostBar'), {
-  type: 'bar',
-  data: {
-    labels: fcCats,
-    datasets: [
-      {
-        label: 'Food Cost %',
-        data: fcVals,
-        backgroundColor: fcColors, borderRadius:4
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:12, boxWidth:12 } },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.label}: $${ctx.parsed.toLocaleString('es-MX')} (${((ctx.parsed/gastosTotal)*100).toFixed(1)}%)` } },
+        datalabels:{ display:true,
+          formatter:v=>((v/gastosTotal)*100).toFixed(1)+'%',
+          color:'#fff', font:{ size:11, weight:'700' },
+          textShadowColor:'rgba(0,0,0,0.4)', textShadowBlur:4 }
       },
-      {
-        label: 'Benchmark 32% (CANIRAC)',
-        data: Array(11).fill(32),
-        type:'line', borderColor:navy, borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false
-      }
-    ]
-  },
-  options: {
-    indexAxis:'y', responsive:true, maintainAspectRatio:true,
-    plugins: {
-      legend:{ position:'top' },
-      tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.x}%` } },
-      datalabels: {
-        display: ctx => ctx.datasetIndex === 0,
-        anchor:'end', align:'right', offset:4,
-        formatter: v => v+'%',
-        font:{ size:10, weight:'700' },
-        color: ctx => ctx.dataset.backgroundColor[ctx.dataIndex]
-      }
-    },
-    scales:{
-      x:{ max:52, ticks:{ callback:v=>v+'%' }, grid:{ color:'#E2E8F0' } }
+      cutout:'58%'
     }
-  }
-});
+  });
 
-// ── 4. CALIFICACIONES ──
-new Chart(document.getElementById('calificaciones'), {
-  type: 'bar',
-  data: {
-    labels:['6\nDetractor','7\nPasivo','8\nPasivo','9\nPromotor','10\nPromotor'],
-    datasets:[{
-      label: 'Encuestas',
-      data: [166,168,161,158,147],
-      backgroundColor: [red,yellow,yellow,green,green],
-      borderRadius:6
-    }]
-  },
-  options: {
-    responsive:true, maintainAspectRatio:true,
-    plugins: {
-      legend:{ display:false },
-      tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} respuestas (${((ctx.parsed.y/800)*100).toFixed(1)}%)` } },
-      datalabels: {
-        display:true, anchor:'end', align:'top', offset:2,
-        formatter: v => v,
-        font:{ size:11, weight:'700' }, color:navy
-      }
+  // 3 — FOOD COST
+  _charts.fc = new Chart(document.getElementById('foodCostBar'), {
+    type:'bar',
+    data:{
+      labels: D.fcCats,
+      datasets:[
+        { label:'Food Cost %', data:D.fcVals, backgroundColor:fcColors, borderRadius:4 },
+        { label:'Benchmark 32% (CANIRAC)', data:Array(D.fcCats.length).fill(32),
+          type:'line', borderColor:navy, borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false }
+      ]
     },
-    scales:{ y:{ max:200, grid:{ color:'#E2E8F0' } } }
-  }
-});
-
-// ── 5. NPS POR SUCURSAL ──
-new Chart(document.getElementById('npsSucursal'), {
-  type: 'bar',
-  data: {
-    labels: ['NPS Global','Centro','Angelópolis','Benchmark\nCANIRAC'],
-    datasets:[{
-      label: 'NPS',
-      data: [17,12,23,52],
-      backgroundColor:[orange,red,yellow,green],
-      borderRadius:8, borderSkipped:false
-    }]
-  },
-  options: {
-    responsive:true, maintainAspectRatio:true,
-    plugins: {
-      legend:{ display:false },
-      tooltip:{ callbacks:{ label:ctx=>`NPS: ${ctx.parsed.y}` } },
-      datalabels: {
-        display:true, anchor:'end', align:'top', offset:4,
-        formatter: v => v,
-        font:{ size:14, weight:'800' },
-        color: ctx => [orange,red,'#92600A',green][ctx.dataIndex]
-      }
-    },
-    scales:{ y:{ min:0, max:65, grid:{ color:'#E2E8F0' } } }
-  }
-});
-
-// ── 6. TIEMPO DE ESPERA (barras comparativas) ──
-new Chart(document.getElementById('tiempoEspera'), {
-  type: 'bar',
-  data: {
-    labels:['Tiempo actual\n(Global)','Centro','Angelópolis','Objetivo\nóptimo'],
-    datasets:[{
-      label:'Minutos',
-      data:[22,21,22,15],
-      backgroundColor:[red,red,red,green],
-      borderRadius:8, borderSkipped:false
-    }]
-  },
-  options: {
-    responsive:true, maintainAspectRatio:true,
-    plugins:{
-      legend:{ display:false },
-      tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} minutos` } },
-      datalabels:{
-        display:true, anchor:'end', align:'top', offset:4,
-        formatter: v => v+' min',
-        font:{ size:12, weight:'800' },
-        color: ctx => ctx.dataIndex===3 ? green : red
-      }
-    },
-    scales:{ y:{ min:0, max:28, ticks:{ callback:v=>v+' min' }, grid:{ color:'#E2E8F0' } } }
-  }
-});
-
-// ── 7. TOP PRODUCTOS ──
-new Chart(document.getElementById('topProductos'), {
-  type: 'bar',
-  data: {
-    labels:['Rib Eye','Hamburguesa','Pasta Alfredo','Tacos','Nachos','Vino Copa','Ensalada César'],
-    datasets:[{
-      label:'Venta Neta ($)',
-      data:[266973,141876,110646,108328,77532,76326,70868],
-      backgroundColor:[red,orange,green,navy+'cc','#9B5DE5','#00BBF9','#F9C74F'],
-      borderRadius:5
-    }]
-  },
-  options:{
-    indexAxis:'y', responsive:true, maintainAspectRatio:true,
-    plugins:{
-      legend:{ display:false },
-      tooltip:{ callbacks:{ label:ctx=>`$${ctx.parsed.x.toLocaleString('es-MX')}` } },
-      datalabels:{
-        display:true, anchor:'end', align:'right', offset:4,
-        formatter: v => '$'+(v/1000).toFixed(0)+'K',
-        font:{ size:10, weight:'700' },
-        color: ctx => ['#C0392B',orange+'dd',green,navy,'#6B21A8','#0077A8','#92600A'][ctx.dataIndex]
-      }
-    },
-    scales:{
-      x:{ min:0, max:310000, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } }
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.x}%` } },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===0,
+          anchor:'end', align:'right', offset:4,
+          formatter:v=>v+'%',
+          font:{ size:10, weight:'700' },
+          color:ctx=>fcColors[ctx.dataIndex]
+        }
+      },
+      scales:{ x:{ max:Math.max(...D.fcVals)*1.18, ticks:{ callback:v=>v+'%' }, grid:{ color:'#E2E8F0' } } }
     }
-  }
-});
+  });
 
-// ── 8. DEMOGRÁFICOS ──
-new Chart(document.getElementById('demograficos'), {
-  type: 'bar',
-  data: {
-    labels:['Puebla\n(303)','Cholula\n(93)','S.A. Cholula\n(53)','Atlixco\n(51)'],
-    datasets:[
-      { label:'18-30',data:[74,25,13,10],backgroundColor:green,borderRadius:3 },
-      { label:'31-40',data:[59,16,11,11],backgroundColor:'#00BBF9',borderRadius:3 },
-      { label:'41-50',data:[59,18,11,9], backgroundColor:yellow,borderRadius:3 },
-      { label:'51-60',data:[64,20,12,8], backgroundColor:orange,borderRadius:3 },
-      { label:'61+',  data:[47,14,6,13], backgroundColor:red,borderRadius:3 }
-    ]
-  },
-  options:{
-    responsive:true, maintainAspectRatio:true,
-    plugins:{
-      legend:{ position:'bottom', labels:{ padding:10, boxWidth:10, font:{size:11} } },
-      tooltip:{ mode:'index', intersect:false },
-      datalabels:{
-        display: ctx => {
-          // Solo mostrar total en el último dataset (stack top)
-          if(ctx.datasetIndex !== 4) return false;
-          return true;
-        },
-        anchor:'end', align:'top', offset:2,
-        formatter:(v,ctx) => {
-          const totals=[303,93,53,51];
-          return totals[ctx.dataIndex];
-        },
-        font:{ size:11, weight:'700' }, color:navy
-      }
+  // 4 — CALIFICACIONES
+  _charts.cal = new Chart(document.getElementById('calificaciones'), {
+    type:'bar',
+    data:{
+      labels:['6\nDetractor','7\nPasivo','8\nPasivo','9\nPromotor','10\nPromotor'],
+      datasets:[{ label:'Encuestas', data:D.cal,
+        backgroundColor:[red,yellow,yellow,green,green], borderRadius:6 }]
     },
-    scales:{
-      x:{ stacked:true, grid:{ display:false } },
-      y:{ stacked:true, grid:{ color:'#E2E8F0' } }
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} respuestas (${((ctx.parsed.y/calTotal)*100).toFixed(1)}%)` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:2,
+          formatter:v=>v, font:{ size:11, weight:'700' }, color:navy }
+      },
+      scales:{ y:{ max:Math.max(...D.cal)*1.25, grid:{ color:'#E2E8F0' } } }
     }
+  });
+
+  // 5 — NPS POR SUCURSAL
+  _charts.nps = new Chart(document.getElementById('npsSucursal'), {
+    type:'bar',
+    data:{
+      labels:['NPS Global','Centro','Angelópolis','Benchmark\nCANIRAC'],
+      datasets:[{ label:'NPS', data:D.nps,
+        backgroundColor:[orange,red,yellow,green], borderRadius:8, borderSkipped:false }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`NPS: ${ctx.parsed.y}` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:4,
+          formatter:v=>v, font:{ size:14, weight:'800' },
+          color:ctx=>[orange,red,'#92600A',green][ctx.dataIndex] }
+      },
+      scales:{ y:{ min:0, max:npsMax, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 6 — TIEMPO DE ESPERA
+  const esperaColors = D.espera.map((_,i)=>i===D.espera.length-1?green:red);
+  _charts.esp = new Chart(document.getElementById('tiempoEspera'), {
+    type:'bar',
+    data:{
+      labels:['Tiempo actual\n(Global)','Centro','Angelópolis','Objetivo\nóptimo'],
+      datasets:[{ label:'Minutos', data:D.espera,
+        backgroundColor:esperaColors, borderRadius:8, borderSkipped:false }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} minutos` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:4,
+          formatter:v=>v+' min', font:{ size:12, weight:'800' },
+          color:ctx=>esperaColors[ctx.dataIndex] }
+      },
+      scales:{ y:{ min:0, max:esperaMax, ticks:{ callback:v=>v+' min' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 7 — TOP PRODUCTOS
+  _charts.prod = new Chart(document.getElementById('topProductos'), {
+    type:'bar',
+    data:{
+      labels: D.prodLabels,
+      datasets:[{ label:'Venta Neta ($)', data:D.prodVals,
+        backgroundColor:D.prodLabels.map((_,i)=>PROD_COLORS[i%PROD_COLORS.length]),
+        borderRadius:5 }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`$${ctx.parsed.x.toLocaleString('es-MX')}` } },
+        datalabels:{ display:true, anchor:'end', align:'right', offset:4,
+          formatter:v=>'$'+(v/1000).toFixed(0)+'K', font:{ size:10, weight:'700' },
+          color:ctx=>PROD_COLORS[ctx.dataIndex%PROD_COLORS.length] }
+      },
+      scales:{ x:{ min:0, max:prodMax, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 8 — DEMOGRÁFICOS
+  // D.demoBands[city][ageGroup] → transpose to datasets[ageGroup][city]
+  const demoDatasets = BAND_LABELS.map((lbl,bi)=>({
+    label:lbl, data:D.demoBands.map(city=>city[bi]),
+    backgroundColor:BAND_COLORS[bi], borderRadius:3
+  }));
+  _charts.demo = new Chart(document.getElementById('demograficos'), {
+    type:'bar',
+    data:{ labels:D.demoLabels, datasets:demoDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:10, boxWidth:10, font:{size:11} } },
+        tooltip:{ mode:'index', intersect:false },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===demoDatasets.length-1,
+          anchor:'end', align:'top', offset:2,
+          formatter:(_,ctx)=>D.demoTotals[ctx.dataIndex]||'',
+          font:{ size:11, weight:'700' }, color:navy
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{ display:false } },
+        y:{ stacked:true, grid:{ color:'#E2E8F0' } }
+      }
+    }
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+async function initDashboard() {
+  showLoader(true);
+  try {
+    const res = await fetch(CSV_URL, { cache:'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error('El CSV está vacío o no tiene el formato esperado (verifica los encabezados: seccion, etiqueta, v1…).');
+    const D = mapRows(rows);
+    buildCharts(D);
+  } catch (err) {
+    showError(err.message);
+    buildCharts(DEF);
+  } finally {
+    showLoader(false);
   }
-});
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
 </body>
 </html>
