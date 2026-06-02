@@ -135,6 +135,7 @@
     <div><span class="badge">Sector: Alimentos y Bebidas</span> <span class="badge">SCIAN: 722</span></div>
     <div style="margin-top:6px"><span class="badge green">Estrato: Pequeña (31-50 emp.)</span> <span class="badge orange">Puebla — #3 nacional DENUE</span></div>
     <div style="margin-top:8px;font-size:.72rem;opacity:.6;">Generado: Junio 2025 · 5,000 transacciones · 800 encuestas · 1,500 reservaciones</div>
+    <div id="data-source-badge" style="margin-top:6px;font-size:.7rem;font-weight:600;letter-spacing:.3px;">⏳ Cargando datos…</div>
   </div>
 </div>
 
@@ -424,44 +425,11 @@ Chart.defaults.plugins.datalabels = { display: false };
 
 const navy='#1B3A6B', green='#00A86B', orange='#F4A261', red='#E63946', yellow='#F9C74F';
 
+// Hoja de configuración/KPIs (formato: seccion, etiqueta, v1…v5)
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1725197522&single=true&output=csv';
 
-/*
-  FORMATO ESPERADO EN GOOGLE SHEETS — columnas: seccion, etiqueta, v1, v2, v3, v4, v5
-  ──────────────────────────────────────────────────────────────────────────────────────
-  seccion        | etiqueta          | v1      | v2     | v3 | v4 | v5
-  ventas         | Ene               | 99845   | 507807 |    |    |
-  ventas         | Feb               | 91381   | 551951 |    |    |
-  ... (12 meses; v1 = ventas muestra, v2 = gastos operativos del mes)
-  gastos         | Nomina            | 4284499 |        |    |    |
-  gastos         | Renta             | 1200082 |        |    |    |
-  gastos         | Marketing         | 358344  |        |    |    |
-  gastos         | Electricidad      | 291840  |        |    |    |
-  gastos         | Mantenimiento     | 192347  |        |    |    |
-  foodcost       | Postres           | 23.3    |        |    |    |
-  foodcost       | Cervezas          | 41.2    |        |    |    |
-  ... (una fila por categoría, ordenadas de menor a mayor food cost)
-  calificaciones | 6                 | 166     |        |    |    |
-  calificaciones | 7                 | 168     |        |    |    |
-  calificaciones | 8                 | 161     |        |    |    |
-  calificaciones | 9                 | 158     |        |    |    |
-  calificaciones | 10                | 147     |        |    |    |
-  nps            | Global            | 17      |        |    |    |
-  nps            | Centro            | 12      |        |    |    |
-  nps            | Angelópolis       | 23      |        |    |    |
-  nps            | Benchmark         | 52      |        |    |    |
-  espera         | Global            | 22      |        |    |    |
-  espera         | Centro            | 21      |        |    |    |
-  espera         | Angelópolis       | 22      |        |    |    |
-  espera         | Óptimo            | 15      |        |    |    |
-  productos      | Rib Eye           | 266973  |        |    |    |
-  ... (una fila por producto, de mayor a menor venta)
-  demo           | Puebla (303)      | 74      | 59     | 59 | 64 | 47
-  demo           | Cholula (93)      | 25      | 16     | 18 | 20 | 14
-  demo           | S.A.Cholula (53)  | 13      | 11     | 11 | 12 | 6
-  demo           | Atlixco (51)      | 10      | 11     | 9  | 8  | 13
-  ... (v1..v5 = grupos de edad 18-30, 31-40, 41-50, 51-60, 61+)
-*/
+// Hoja de transacciones POS (columnas: Fecha, Sucursal, Ticket, Cliente_ID, Mesa, Producto, Categoria, Cantidad, Precio_Unitario, Descuento, Venta_Neta)
+const VENTAS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=221890987&single=true&output=csv';
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const PROD_COLORS = [red, orange, green, navy+'cc', '#9B5DE5', '#00BBF9', '#F9C74F'];
@@ -823,23 +791,101 @@ function buildCharts(D) {
   });
 }
 
+// ── TRANSACTIONS PROCESSOR ─────────────────────────────────────
+function parseMonthIndex(fechaStr) {
+  if (!fechaStr) return -1;
+  // YYYY-MM-DD
+  let m = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return parseInt(m[2]) - 1;
+  // DD/MM/YYYY
+  m = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return parseInt(m[2]) - 1;
+  return -1;
+}
+
+function applyTransactions(rows, D) {
+  if (!rows.length) return;
+
+  // Normalize headers to lowercase for resilience
+  const sample = rows[0];
+  const key = (variants) => variants.find(v => sample[v] !== undefined) || variants[0];
+  const kFecha    = key(['Fecha','fecha','FECHA']);
+  const kProducto = key(['Producto','producto','PRODUCTO']);
+  const kVenta    = key(['Venta_Neta','venta_neta','VENTA_NETA','Venta Neta','venta neta']);
+
+  // Aggregate monthly ventas
+  const monthlyVentas = new Array(12).fill(0);
+  const prodMap = {};
+
+  rows.forEach(row => {
+    const venta = parseFloat((row[kVenta] || '0').replace(/[$,\s]/g, '')) || 0;
+    const mi = parseMonthIndex(row[kFecha] || '');
+    if (mi >= 0) monthlyVentas[mi] += venta;
+
+    const prod = (row[kProducto] || '').trim();
+    if (prod) prodMap[prod] = (prodMap[prod] || 0) + venta;
+  });
+
+  // Only override if we got real data
+  if (monthlyVentas.some(v => v > 0)) {
+    D.ventas = monthlyVentas.map(v => Math.round(v));
+  }
+
+  // Top 7 productos by total Venta_Neta
+  const sorted = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  if (sorted.length) {
+    D.prodLabels = sorted.map(e => e[0]);
+    D.prodVals   = sorted.map(e => Math.round(e[1]));
+  }
+}
+
 // ── INIT ───────────────────────────────────────────────────────
 async function initDashboard() {
   showLoader(true);
-  try {
-    const res = await fetch(CSV_URL, { cache:'no-cache' });
-    if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    if (!rows.length) throw new Error('El CSV está vacío o no tiene el formato esperado (verifica los encabezados: seccion, etiqueta, v1…).');
-    const D = mapRows(rows);
-    buildCharts(D);
-  } catch (err) {
-    showError(err.message);
-    buildCharts(DEF);
-  } finally {
-    showLoader(false);
+  const errors = [];
+
+  // Cache-busting: añade timestamp para forzar fetch fresco cada carga
+  const ts = Date.now();
+  const urlKpi    = `${CSV_URL}&_t=${ts}`;
+  const urlVentas = `${VENTAS_URL}&_t=${ts}`;
+
+  // Fetch both sheets in parallel
+  const [kpiResult, ventasResult] = await Promise.allSettled([
+    fetch(urlKpi,    { cache:'reload' }).then(r => { if (!r.ok) throw new Error(`KPI sheet HTTP ${r.status}`);    return r.text(); }),
+    fetch(urlVentas, { cache:'reload' }).then(r => { if (!r.ok) throw new Error(`Ventas sheet HTTP ${r.status}`); return r.text(); })
+  ]);
+
+  // Start with defaults, then overlay fetched data
+  let D = JSON.parse(JSON.stringify(DEF));
+
+  if (kpiResult.status === 'fulfilled') {
+    const rows = parseCSV(kpiResult.value);
+    if (rows.length) D = mapRows(rows);
+  } else {
+    errors.push(`Hoja KPI: ${kpiResult.reason.message}`);
   }
+
+  if (ventasResult.status === 'fulfilled') {
+    const rows = parseCSV(ventasResult.value);
+    applyTransactions(rows, D);
+  } else {
+    errors.push(`Hoja Ventas: ${ventasResult.reason.message}`);
+  }
+
+  if (errors.length) showError(errors.join(' · '));
+
+  // Indicador de fuente de datos
+  const ventasOk = ventasResult.status === 'fulfilled';
+  const srcEl = document.getElementById('data-source-badge');
+  if (srcEl) {
+    srcEl.textContent = ventasOk
+      ? `✅ Ventas: live desde Sheets · ${new Date().toLocaleTimeString('es-MX')}`
+      : `⚠️ Ventas: datos de respaldo (no se pudo conectar al sheet)`;
+    srcEl.style.color = ventasOk ? '#00A86B' : '#E63946';
+  }
+
+  buildCharts(D);
+  showLoader(false);
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);
