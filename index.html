@@ -155,13 +155,13 @@
     <div class="kpi-card red">
       <div class="kpi-icon">📊</div>
       <div class="kpi-label">NPS Global</div>
-      <div class="kpi-value red">17</div>
+      <div class="kpi-value red" id="kv-nps">17</div>
       <div class="kpi-bench"><span class="semaforo red"></span>Benchmark CANIRAC: <span>52</span> · −35 pts</div>
     </div>
     <div class="kpi-card green">
       <div class="kpi-icon">🎫</div>
       <div class="kpi-label">Ticket Promedio</div>
-      <div class="kpi-value green">$292</div>
+      <div class="kpi-value green" id="kv-ticket">$292</div>
       <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>$290</span> · En objetivo</div>
     </div>
     <div class="kpi-card red">
@@ -173,31 +173,31 @@
     <div class="kpi-card yellow">
       <div class="kpi-icon">📅</div>
       <div class="kpi-label">No-Shows</div>
-      <div class="kpi-value yellow">9.6%</div>
+      <div class="kpi-value yellow" id="kv-noshow">9.6%</div>
       <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&lt;5%</span> · +4.6 pts</div>
     </div>
     <div class="kpi-card green">
       <div class="kpi-icon">🔄</div>
       <div class="kpi-label">Retención Clientes</div>
-      <div class="kpi-value green">97.2%</div>
+      <div class="kpi-value green" id="kv-retencion">97.2%</div>
       <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>&gt;70%</span> · Excepcional</div>
     </div>
     <div class="kpi-card yellow">
       <div class="kpi-icon">⭐</div>
       <div class="kpi-label">Calificación Prom.</div>
-      <div class="kpi-value yellow">7.9</div>
+      <div class="kpi-value yellow" id="kv-calificacion">7.9</div>
       <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&gt;8.5</span> · −0.6 pts</div>
     </div>
     <div class="kpi-card red">
       <div class="kpi-icon">⏱️</div>
       <div class="kpi-label">Espera Promedio</div>
-      <div class="kpi-value red">22 min</div>
+      <div class="kpi-value red" id="kv-espera">22 min</div>
       <div class="kpi-bench"><span class="semaforo red"></span>Óptimo: <span>&lt;15 min</span> · +7 min</div>
     </div>
     <div class="kpi-card green">
       <div class="kpi-icon">👥</div>
       <div class="kpi-label">Visitas / Cliente / Año</div>
-      <div class="kpi-value green">12.9</div>
+      <div class="kpi-value green" id="kv-visitas">12.9</div>
       <div class="kpi-bench"><span class="semaforo green"></span>Óptimo: <span>&gt;6</span> · Excelente</div>
     </div>
   </div>
@@ -425,11 +425,15 @@ Chart.defaults.plugins.datalabels = { display: false };
 
 const navy='#1B3A6B', green='#00A86B', orange='#F4A261', red='#E63946', yellow='#F9C74F';
 
-// Hoja de configuración/KPIs (formato: seccion, etiqueta, v1…v5)
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1725197522&single=true&output=csv';
-
-// Hoja de transacciones POS (columnas: Fecha, Sucursal, Ticket, Cliente_ID, Mesa, Producto, Categoria, Cantidad, Precio_Unitario, Descuento, Venta_Neta)
-const VENTAS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=221890987&single=true&output=csv';
+// Hojas de Google Sheets — una URL por fuente de datos
+const URLS = {
+  ventas:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=221890987&single=true&output=csv',
+  clientes:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1149480486&single=true&output=csv',
+  gastos:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=909025389&single=true&output=csv',
+  personal:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=849771124&single=true&output=csv',
+  encuestas:     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1587933693&single=true&output=csv',
+  reservaciones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1134240889&single=true&output=csv'
+};
 
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const PROD_COLORS = [red, orange, green, navy+'cc', '#9B5DE5', '#00BBF9', '#F9C74F'];
@@ -791,100 +795,228 @@ function buildCharts(D) {
   });
 }
 
-// ── TRANSACTIONS PROCESSOR ─────────────────────────────────────
+// ── HELPERS ────────────────────────────────────────────────────
 function parseMonthIndex(fechaStr) {
   if (!fechaStr) return -1;
-  // YYYY-MM-DD
   let m = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return parseInt(m[2]) - 1;
-  // DD/MM/YYYY
   m = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (m) return parseInt(m[2]) - 1;
   return -1;
 }
+const num = s => parseFloat((s||'').replace(/[$,\s]/g,'')) || 0;
+
+// ── SHEET PROCESSORS ──────────────────────────────────────────
 
 function applyTransactions(rows, D) {
   if (!rows.length) return;
-
-  // Normalize headers to lowercase for resilience
-  const sample = rows[0];
-  const key = (variants) => variants.find(v => sample[v] !== undefined) || variants[0];
-  const kFecha    = key(['Fecha','fecha','FECHA']);
-  const kProducto = key(['Producto','producto','PRODUCTO']);
-  const kVenta    = key(['Venta_Neta','venta_neta','VENTA_NETA','Venta Neta','venta neta']);
-
-  // Aggregate monthly ventas
   const monthlyVentas = new Array(12).fill(0);
-  const prodMap = {};
-
-  rows.forEach(row => {
-    const venta = parseFloat((row[kVenta] || '0').replace(/[$,\s]/g, '')) || 0;
-    const mi = parseMonthIndex(row[kFecha] || '');
-    if (mi >= 0) monthlyVentas[mi] += venta;
-
-    const prod = (row[kProducto] || '').trim();
-    if (prod) prodMap[prod] = (prodMap[prod] || 0) + venta;
+  const prodMap = {}, ticketMap = {};
+  rows.forEach(r => {
+    const venta   = num(r.venta_neta);
+    const mi      = parseMonthIndex(r.fecha);
+    const prod    = (r.producto || '').trim();
+    const ticket  = (r.ticket   || '').trim();
+    if (mi >= 0)   monthlyVentas[mi] += venta;
+    if (prod)      prodMap[prod]   = (prodMap[prod]   || 0) + venta;
+    if (ticket)    ticketMap[ticket] = (ticketMap[ticket] || 0) + venta;
   });
+  if (monthlyVentas.some(v => v > 0)) D.ventas = monthlyVentas.map(v => Math.round(v));
+  const sorted = Object.entries(prodMap).sort((a,b) => b[1]-a[1]).slice(0,7);
+  if (sorted.length) { D.prodLabels = sorted.map(e=>e[0]); D.prodVals = sorted.map(e=>Math.round(e[1])); }
+  const tCount = Object.keys(ticketMap).length;
+  const tTotal = Object.values(ticketMap).reduce((a,b)=>a+b,0);
+  if (tCount > 0) D.computed.ticketPromedio = tTotal / tCount;
+}
 
-  // Only override if we got real data
-  if (monthlyVentas.some(v => v > 0)) {
-    D.ventas = monthlyVentas.map(v => Math.round(v));
+function applyGastos(rows, D) {
+  if (!rows.length) return;
+  const monthly = new Array(12).fill(0);
+  const catMap  = {};
+  rows.forEach(r => {
+    const monto = num(r.monto);
+    const mi    = parseMonthIndex(r.fecha);
+    const cat   = (r.categoria_gasto || '').trim();
+    if (mi >= 0) monthly[mi] += monto;
+    if (cat)     catMap[cat] = (catMap[cat] || 0) + monto;
+  });
+  if (monthly.some(v => v > 0)) D.gastos = monthly.map(v => Math.round(v));
+  const cats = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+  if (cats.length) { D.gastosLabels = cats.map(e=>e[0]); D.gastosVals = cats.map(e=>Math.round(e[1])); }
+}
+
+function applyPersonal(rows, D) {
+  if (!rows.length) return;
+  let totalLabor = 0;
+  rows.forEach(r => { totalLabor += num(r.horas_trabajadas) * num(r.costo_hora); });
+  if (totalLabor > 0) {
+    const idx = D.gastosLabels.findIndex(l => /n[oó]m/i.test(l));
+    if (idx >= 0) D.gastosVals[idx] = Math.round(totalLabor);
+    else { D.gastosLabels.unshift('Nómina'); D.gastosVals.unshift(Math.round(totalLabor)); }
   }
+}
 
-  // Top 7 productos by total Venta_Neta
-  const sorted = Object.entries(prodMap).sort((a, b) => b[1] - a[1]).slice(0, 7);
+function applyEncuestas(rows, D) {
+  if (!rows.length) return;
+  const cal = {6:0,7:0,8:0,9:0,10:0};
+  const bNPS = {}, bEsp = {};
+  let gProm=0, gDet=0, gTotal=0, calSum=0, calCnt=0, espSum=0, espCnt=0;
+  rows.forEach(r => {
+    const c   = parseInt(r.calificacion) || 0;
+    const esp = parseInt(r.tiempo_espera) || 0;
+    const suc = (r.sucursal || '').trim();
+    if (c >= 6 && c <= 10) {
+      cal[c]++; gTotal++; calSum += c; calCnt++;
+      if (c >= 9) gProm++; else if (c === 6) gDet++;
+      if (suc) {
+        if (!bNPS[suc]) bNPS[suc] = {prom:0,det:0,total:0};
+        bNPS[suc].total++;
+        if (c >= 9) bNPS[suc].prom++; else if (c === 6) bNPS[suc].det++;
+      }
+    }
+    if (esp > 0) {
+      espSum += esp; espCnt++;
+      if (suc) {
+        if (!bEsp[suc]) bEsp[suc] = {sum:0,count:0};
+        bEsp[suc].sum += esp; bEsp[suc].count++;
+      }
+    }
+  });
+  D.cal = [6,7,8,9,10].map(k => cal[k]||0);
+  const npsOf = b => b ? Math.round((b.prom-b.det)/b.total*100) : null;
+  const espOf = b => b ? Math.round(b.sum/b.count) : null;
+  const centro  = Object.keys(bNPS).find(k => k.toLowerCase().includes('centro'));
+  const angel   = Object.keys(bNPS).find(k => k.toLowerCase().startsWith('angel'));
+  const npsG    = gTotal ? Math.round((gProm-gDet)/gTotal*100) : D.nps[0];
+  D.nps   = [npsG, npsOf(bNPS[centro])??D.nps[1], npsOf(bNPS[angel])??D.nps[2], D.nps[3]];
+  const espG = espCnt ? Math.round(espSum/espCnt) : D.espera[0];
+  const cEsp = centro && bEsp[centro];
+  const aEsp = angel  && bEsp[angel];
+  D.espera = [espG, espOf(cEsp)??D.espera[1], espOf(aEsp)??D.espera[2], D.espera[3]];
+  D.computed.npsGlobal    = npsG;
+  D.computed.calPromedio  = calCnt ? (calSum/calCnt).toFixed(1) : null;
+  D.computed.esperaGlobal = espG;
+}
+
+function applyClientes(rows, D) {
+  if (!rows.length) return;
+  const AGE = [[18,30],[31,40],[41,50],[51,60],[61,120]];
+  const cityMap = {};
+  let visSum=0, visCnt=0, retCnt=0;
+  rows.forEach(r => {
+    const edad   = parseInt(r.edad) || 0;
+    const ciudad = (r.ciudad || '').trim();
+    const vis    = num(r['visitas_año'] || r.visitas_ano || '0');
+    if (ciudad) {
+      if (!cityMap[ciudad]) cityMap[ciudad] = [0,0,0,0,0];
+      const ri = AGE.findIndex(([mn,mx]) => edad >= mn && edad <= mx);
+      if (ri >= 0) cityMap[ciudad][ri]++;
+    }
+    if (vis > 0) { visSum += vis; visCnt++; if (vis > 1) retCnt++; }
+  });
+  const sorted = Object.entries(cityMap)
+    .map(([c,b]) => [c, b, b.reduce((a,x)=>a+x,0)])
+    .sort((a,b) => b[2]-a[2]).slice(0,4);
   if (sorted.length) {
-    D.prodLabels = sorted.map(e => e[0]);
-    D.prodVals   = sorted.map(e => Math.round(e[1]));
+    D.demoLabels  = sorted.map(([c,,t]) => `${c}\n(${t})`);
+    D.demoTotals  = sorted.map(([,,t]) => t);
+    D.demoBands   = sorted.map(([,b]) => b);
+  }
+  if (visCnt > 0) {
+    D.computed.visitasPromedio = (visSum/visCnt).toFixed(1);
+    D.computed.retencion       = ((retCnt/visCnt)*100).toFixed(1);
+  }
+}
+
+function applyReservaciones(rows, D) {
+  if (!rows.length) return;
+  const si = v => ['si','sí','1','true'].includes((v||'').trim().toLowerCase());
+  const no = v => ['no','0','false'].includes((v||'').trim().toLowerCase());
+  let total=0, noShows=0;
+  rows.forEach(r => { if (si(r.reservo)) { total++; if (no(r.asistio)) noShows++; } });
+  if (total > 0) D.computed.noShows = ((noShows/total)*100).toFixed(1);
+}
+
+// ── KPI CARD UPDATER ──────────────────────────────────────────
+function updateKPICards(D) {
+  const c = D.computed || {};
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (el && val != null) { el.textContent = val; el.className = 'kpi-value ' + cls; }
+  };
+  if (c.npsGlobal != null) {
+    const v = Math.round(c.npsGlobal);
+    set('kv-nps', v, v >= 40 ? 'green' : v >= 20 ? 'yellow' : 'red');
+  }
+  if (c.ticketPromedio != null) {
+    const v = Math.round(c.ticketPromedio);
+    set('kv-ticket', '$'+v, v >= 290 ? 'green' : 'yellow');
+  }
+  if (c.noShows != null) {
+    const v = parseFloat(c.noShows);
+    set('kv-noshow', v.toFixed(1)+'%', v <= 5 ? 'green' : v <= 10 ? 'yellow' : 'red');
+  }
+  if (c.retencion != null) {
+    const v = parseFloat(c.retencion);
+    set('kv-retencion', v.toFixed(1)+'%', v >= 70 ? 'green' : 'yellow');
+  }
+  if (c.calPromedio != null) {
+    const v = parseFloat(c.calPromedio);
+    set('kv-calificacion', v.toFixed(1), v >= 8.5 ? 'green' : v >= 7 ? 'yellow' : 'red');
+  }
+  if (c.esperaGlobal != null) {
+    const v = Math.round(c.esperaGlobal);
+    set('kv-espera', v+' min', v <= 15 ? 'green' : v <= 20 ? 'yellow' : 'red');
+  }
+  if (c.visitasPromedio != null) {
+    const v = parseFloat(c.visitasPromedio);
+    set('kv-visitas', v.toFixed(1), v >= 6 ? 'green' : 'yellow');
   }
 }
 
 // ── INIT ───────────────────────────────────────────────────────
+async function fetchSheet(url) {
+  const r = await fetch(`${url}&_t=${Date.now()}`, { cache:'reload' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return parseCSV(await r.text());
+}
+
 async function initDashboard() {
   showLoader(true);
+
+  const [ventasR, clientesR, gastosR, personalR, encuestasR, reservasR] =
+    await Promise.allSettled(Object.values(URLS).map(fetchSheet));
+
+  const D = JSON.parse(JSON.stringify(DEF));
+  D.computed = {};
+
   const errors = [];
+  const apply = (result, name, fn) => {
+    if (result.status === 'fulfilled') {
+      try { fn(result.value, D); } catch(e) { errors.push(`${name}: error interno`); }
+    } else {
+      errors.push(`${name}: ${result.reason.message}`);
+    }
+  };
 
-  // Cache-busting: añade timestamp para forzar fetch fresco cada carga
-  const ts = Date.now();
-  const urlKpi    = `${CSV_URL}&_t=${ts}`;
-  const urlVentas = `${VENTAS_URL}&_t=${ts}`;
-
-  // Fetch both sheets in parallel
-  const [kpiResult, ventasResult] = await Promise.allSettled([
-    fetch(urlKpi,    { cache:'reload' }).then(r => { if (!r.ok) throw new Error(`KPI sheet HTTP ${r.status}`);    return r.text(); }),
-    fetch(urlVentas, { cache:'reload' }).then(r => { if (!r.ok) throw new Error(`Ventas sheet HTTP ${r.status}`); return r.text(); })
-  ]);
-
-  // Start with defaults, then overlay fetched data
-  let D = JSON.parse(JSON.stringify(DEF));
-
-  if (kpiResult.status === 'fulfilled') {
-    const rows = parseCSV(kpiResult.value);
-    if (rows.length) D = mapRows(rows);
-  } else {
-    errors.push(`Hoja KPI: ${kpiResult.reason.message}`);
-  }
-
-  if (ventasResult.status === 'fulfilled') {
-    const rows = parseCSV(ventasResult.value);
-    applyTransactions(rows, D);
-  } else {
-    errors.push(`Hoja Ventas: ${ventasResult.reason.message}`);
-  }
+  apply(ventasR,    'Ventas',        applyTransactions);
+  apply(gastosR,    'Gastos',        applyGastos);
+  apply(personalR,  'Personal',      applyPersonal);
+  apply(encuestasR, 'Encuestas',     applyEncuestas);
+  apply(clientesR,  'Clientes',      applyClientes);
+  apply(reservasR,  'Reservaciones', applyReservaciones);
 
   if (errors.length) showError(errors.join(' · '));
 
-  // Indicador de fuente de datos
-  const ventasOk = ventasResult.status === 'fulfilled';
+  const loaded = 6 - errors.length;
   const srcEl = document.getElementById('data-source-badge');
   if (srcEl) {
-    srcEl.textContent = ventasOk
-      ? `✅ Ventas: live desde Sheets · ${new Date().toLocaleTimeString('es-MX')}`
-      : `⚠️ Ventas: datos de respaldo (no se pudo conectar al sheet)`;
-    srcEl.style.color = ventasOk ? '#00A86B' : '#E63946';
+    srcEl.textContent = `${loaded === 6 ? '✅' : '⚠️'} ${loaded}/6 hojas · ${new Date().toLocaleTimeString('es-MX')}`;
+    srcEl.style.color = loaded === 6 ? '#00A86B' : '#E63946';
   }
 
   buildCharts(D);
+  updateKPICards(D);
   showLoader(false);
 }
 
