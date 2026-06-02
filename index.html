@@ -256,7 +256,7 @@
 
     <div class="chart-card">
       <div class="chart-title">Top 7 Productos por Venta Neta (muestra)</div>
-      <div class="chart-subtitle">Rib Eye = 23.3% de ventas totales · Food cost 44.2% — producto de alto riesgo de margen</div>
+      <div class="chart-subtitle" id="subtitle-top-productos">Rib Eye = 23.3% de ventas totales · Food cost 44.2% — producto de alto riesgo de margen</div>
       <canvas id="topProductos"></canvas>
     </div>
 
@@ -312,8 +312,8 @@
 
     <div class="hallazgo-card red">
       <div class="hallazgo-tag">🔴 Crítico · Impacto financiero directo</div>
-      <div class="hallazgo-title">Food Cost del Rib Eye al 44.2% — Producto estrella que erosiona el margen</div>
-      <div class="hallazgo-body">
+      <div class="hallazgo-title" id="hallazgo-estrella-title">Food Cost del Rib Eye al 44.2% — Producto estrella que erosiona el margen</div>
+      <div class="hallazgo-body" id="hallazgo-estrella-body">
         El Rib Eye representa el <strong>23.3% de todas las ventas</strong> pero su food cost destruye el margen: $180 de costo por cada $420 de venta. Es el producto más vendido y el más costoso en ratio.
         <br><br><strong>Tres opciones:</strong> (1) Renegociar precio con proveedor por volumen. (2) Subir precio a $460-$480. (3) Crear combo que incluya guarnición de alto margen (postres: 23.3% food cost) y elevar ticket sin elevar costo. Reducir de 44% a 38% tiene impacto directo en resultados.
       </div>
@@ -394,7 +394,7 @@
         <ul style="list-style:none;font-size:.83rem;line-height:1.9;opacity:.9;">
           <li>🔴 NPS en 17 — objetivo mínimo: 40</li>
           <li>🔴 Espera 22 min → objetivo: &lt;12 min</li>
-          <li>🔴 Food cost Rib Eye 44.2% → meta: 38%</li>
+          <li id="resumen-food-cost">🔴 Food cost Rib Eye 44.2% → meta: 38%</li>
           <li>🔴 Sin captura de ventas totales</li>
           <li>🟡 No-shows 9.6% → activar WhatsApp</li>
         </ul>
@@ -974,6 +974,36 @@ function updateKPICards(D) {
   }
 }
 
+// ── INSIGHTS UPDATER ──────────────────────────────────────────
+function updateInsights(D) {
+  if (!D.prodLabels || !D.prodLabels.length) return;
+  const top    = D.prodLabels[0];
+  const topVal = D.prodVals[0] || 0;
+  const total  = D.prodVals.reduce((a,b) => a+b, 0);
+  const topPct = total > 0 ? ((topVal/total)*100).toFixed(1) : null;
+  const topK   = (topVal/1000).toFixed(0);
+
+  const sub = document.getElementById('subtitle-top-productos');
+  if (sub && topPct) {
+    sub.textContent = `${top} = ${topPct}% de ventas en muestra ($${topK}K) · Top 7 productos por venta neta`;
+  }
+
+  const ht = document.getElementById('hallazgo-estrella-title');
+  if (ht) {
+    ht.textContent = `Producto líder en ventas: ${top} (${topPct}% de la muestra) — Revisar food cost de categoría`;
+  }
+
+  const hb = document.getElementById('hallazgo-estrella-body');
+  if (hb && topPct) {
+    hb.innerHTML = `<strong>${top}</strong> lidera con el <strong>${topPct}% de las ventas</strong> en la muestra ($${topK}K). Para proteger el margen, calcular su food cost: si supera el benchmark CANIRAC de <strong>32%</strong>, tiene tres palancas: (1) renegociar precio con proveedor por volumen, (2) ajustar precio de venta, (3) crear combo con guarnición de alto margen (postres tienen food cost 23.3%). Reducir food cost de la categoría líder tiene el mayor impacto directo en resultados.`;
+  }
+
+  const ri = document.getElementById('resumen-food-cost');
+  if (ri) {
+    ri.innerHTML = `🔴 Auditar food cost de <strong>${top}</strong> — producto líder en ventas`;
+  }
+}
+
 // ── INIT ───────────────────────────────────────────────────────
 async function fetchSheet(url) {
   const r = await fetch(`${url}&_t=${Date.now()}`, { cache:'reload' });
@@ -1017,6 +1047,7 @@ async function initDashboard() {
 
   buildCharts(D);
   updateKPICards(D);
+  updateInsights(D);
   showLoader(false);
 }
 
