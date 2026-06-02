@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Restaurante PyME | Puebla 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --navy:#1B3A6B; --navy2:#243E6E; --green:#00A86B; --orange:#F4A261;
+    --red:#E63946; --yellow:#F9C74F; --bg:#F0F2F5; --card:#FFFFFF;
+    --text:#2D3748; --muted:#718096; --border:#E2E8F0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+
+  .header{
+    background:linear-gradient(135deg,#1B3A6B 0%,#243E6E 60%,#1a4d7a 100%);
+    color:white;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 4px 20px rgba(27,58,107,.4);
+  }
+  .header-left h1{font-size:1.7rem;font-weight:700;letter-spacing:-.5px;}
+  .header-left .subtitle{font-size:.88rem;opacity:.75;margin-top:4px;}
+  .header-right{text-align:right;}
+  .badge{
+    display:inline-block;padding:4px 12px;border-radius:20px;font-size:.75rem;
+    font-weight:600;letter-spacing:.5px;background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.3);margin:2px;
+  }
+  .badge.green{background:#00A86B22;border-color:#00A86B;color:#7fffd4;}
+  .badge.orange{background:#F4A26122;border-color:#F4A261;color:#ffd9b3;}
+
+  .container{max-width:1400px;margin:0 auto;padding:28px 24px;}
+  .section-title{
+    font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--muted);margin:28px 0 14px;padding-bottom:8px;
+    border-bottom:2px solid var(--border);
+  }
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:16px;}
+  .kpi-card{
+    background:var(--card);border-radius:14px;padding:20px 22px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);border-top:4px solid transparent;
+    transition:transform .2s,box-shadow .2s;
+  }
+  .kpi-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+  .kpi-card.red{border-top-color:var(--red);}
+  .kpi-card.yellow{border-top-color:var(--yellow);}
+  .kpi-card.green{border-top-color:var(--green);}
+  .kpi-icon{font-size:1.6rem;margin-bottom:8px;}
+  .kpi-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+  .kpi-value{font-size:2rem;font-weight:800;color:var(--text);line-height:1.1;margin:6px 0 4px;}
+  .kpi-value.red{color:var(--red);}
+  .kpi-value.yellow{color:#c87d00;}
+  .kpi-value.green{color:var(--green);}
+  .kpi-bench{font-size:.72rem;color:var(--muted);}
+  .kpi-bench span{font-weight:600;}
+  .semaforo{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+  .semaforo.red{background:var(--red);}
+  .semaforo.yellow{background:var(--yellow);}
+  .semaforo.green{background:var(--green);}
+
+  .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+  .chart-card{
+    background:var(--card);border-radius:14px;padding:24px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+  }
+  .chart-card.wide{grid-column:span 2;}
+  .chart-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .chart-subtitle{font-size:.72rem;color:var(--muted);margin-bottom:18px;}
+  canvas{max-height:280px;}
+
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.83rem;}
+  thead th{
+    background:var(--navy);color:white;padding:10px 14px;
+    text-align:left;font-size:.72rem;letter-spacing:.6px;text-transform:uppercase;
+  }
+  tbody tr:nth-child(even){background:#F7F9FC;}
+  tbody tr:hover{background:#EDF2FF;}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--border);}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+  }
+  .pill.red{background:#FEE2E2;color:#C0392B;}
+  .pill.yellow{background:#FEF3C7;color:#92600A;}
+  .pill.green{background:#D1FAE5;color:#065F46;}
+
+  .hallazgos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .hallazgo-card{border-radius:14px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+  .hallazgo-card.red{background:#FFF5F5;border-left:5px solid var(--red);}
+  .hallazgo-card.yellow{background:#FFFBEB;border-left:5px solid var(--yellow);}
+  .hallazgo-card.green{background:#F0FFF4;border-left:5px solid var(--green);}
+  .hallazgo-tag{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .hallazgo-card.red .hallazgo-tag{color:var(--red);}
+  .hallazgo-card.yellow .hallazgo-tag{color:#92600A;}
+  .hallazgo-card.green .hallazgo-tag{color:var(--green);}
+  .hallazgo-title{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+  .hallazgo-body{font-size:.8rem;color:var(--muted);line-height:1.55;}
+  .hallazgo-body strong{color:var(--text);}
+
+  .data-note{
+    background:#EBF4FF;border:1px solid #BEE3F8;border-radius:10px;
+    padding:12px 18px;font-size:.78rem;color:#2B6CB0;margin-bottom:20px;line-height:1.5;
+  }
+  .data-note strong{color:#1A365D;}
+  .source-note{
+    background:#F0FFF4;border:1px solid #9AE6B4;border-radius:10px;
+    padding:12px 18px;font-size:.76rem;color:#276749;margin-bottom:12px;line-height:1.6;
+  }
+  .source-note strong{color:#1C4532;}
+
+  footer{
+    text-align:center;padding:24px;font-size:.72rem;color:var(--muted);
+    border-top:1px solid var(--border);margin-top:40px;
+  }
+  @media(max-width:768px){
+    .chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}
+    .chart-card.wide{grid-column:span 1;}
+    .header{flex-direction:column;gap:14px;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🍽️ Restaurante PyME — Dashboard de Desempeño</h1>
+    <div class="subtitle">Análisis integral 2025 · Dos sucursales (Centro + Angelópolis) · Consultoría PyME Puebla</div>
+  </div>
+  <div class="header-right">
+    <div><span class="badge">Sector: Alimentos y Bebidas</span> <span class="badge">SCIAN: 722</span></div>
+    <div style="margin-top:6px"><span class="badge green">Estrato: Pequeña (31-50 emp.)</span> <span class="badge orange">Puebla — #3 nacional DENUE</span></div>
+    <div style="margin-top:8px;font-size:.72rem;opacity:.6;">Generado: Junio 2025 · 5,000 transacciones · 800 encuestas · 1,500 reservaciones</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="data-note">
+    ℹ️ <strong>Nota metodológica:</strong> El archivo de ventas contiene una <strong>muestra representativa de 5,000 transacciones</strong>. Los KPIs de ratio (food cost %, ticket promedio, mix de productos, estacionalidad) son válidos a partir de la muestra. Los KPIs de volumen absoluto (EBITDA, labor cost %) requieren el total de ventas del año — su captura sistematizada es una recomendación crítica de este análisis. Ventas implícitas estimadas con benchmark de nómina: <strong>~$15.3M anuales</strong> (ambas sucursales).
+  </div>
+
+  <div class="source-note">
+    📚 <strong>Fuente de benchmarks:</strong> Los rangos operativos (food cost, NPS, no-shows, tiempo de espera) provienen de estándares de la industria restaurantera — principalmente <strong>CANIRAC</strong> y el archivo <strong>Benchmark_Industria.csv</strong> incluido en los datos de simulación. El <strong>DENUE 05/2026 / INEGI</strong> es la fuente para contexto sectorial de Puebla (volumen de unidades, estratificación, clasificación SCIAN) — no publica benchmarks operativos. Para benchmarks oficiales de márgenes por sector, consultar los <strong>Censos Económicos INEGI 2024</strong>.
+  </div>
+
+  <!-- KPIs -->
+  <div class="section-title">Indicadores Clave de Desempeño (KPIs)</div>
+  <div class="kpi-grid">
+    <div class="kpi-card red">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">NPS Global</div>
+      <div class="kpi-value red">17</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>Benchmark CANIRAC: <span>52</span> · −35 pts</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">🎫</div>
+      <div class="kpi-label">Ticket Promedio</div>
+      <div class="kpi-value green">$292</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>$290</span> · En objetivo</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">🥩</div>
+      <div class="kpi-label">Food Cost %</div>
+      <div class="kpi-value red">35.4%</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>CANIRAC: <span>&lt;32%</span> · +3.4 pts</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">No-Shows</div>
+      <div class="kpi-value yellow">9.6%</div>
+      <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&lt;5%</span> · +4.6 pts</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">🔄</div>
+      <div class="kpi-label">Retención Clientes</div>
+      <div class="kpi-value green">97.2%</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>&gt;70%</span> · Excepcional</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">⭐</div>
+      <div class="kpi-label">Calificación Prom.</div>
+      <div class="kpi-value yellow">7.9</div>
+      <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&gt;8.5</span> · −0.6 pts</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-label">Espera Promedio</div>
+      <div class="kpi-value red">22 min</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>Óptimo: <span>&lt;15 min</span> · +7 min</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">Visitas / Cliente / Año</div>
+      <div class="kpi-value green">12.9</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Óptimo: <span>&gt;6</span> · Excelente</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: VENTAS Y GASTOS -->
+  <div class="section-title">Ventas — Estacionalidad & Estructura de Costos</div>
+  <div class="chart-grid-2">
+
+    <div class="chart-card wide">
+      <div class="chart-title">Ventas Mensuales (muestra) vs. Gastos Operativos Totales — 2025</div>
+      <div class="chart-subtitle">Pico de ventas: Abril ($108K) y Julio ($105K) · Valle: Junio ($84K) · Gastos estables ~$527K/mes</div>
+      <canvas id="ventasGastos"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Estructura de Gastos Operativos Anuales</div>
+      <div class="chart-subtitle">Total real: $6,327,113 MXN · Nómina = 67.7% de los gastos totales</div>
+      <canvas id="gastosDonut"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Food Cost % por Categoría</div>
+      <div class="chart-subtitle">Línea punteada = benchmark CANIRAC 32% · Rojo &gt;38% · Verde &lt;32%</div>
+      <canvas id="foodCostBar"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: NPS Y SATISFACCIÓN -->
+  <div class="section-title">Satisfacción del Cliente & NPS — Correlación con Tiempo de Espera</div>
+  <div class="chart-grid-3">
+
+    <div class="chart-card">
+      <div class="chart-title">Distribución de Calificaciones</div>
+      <div class="chart-subtitle">800 encuestas · Detractores (6): 20.8% · Pasivos (7-8): 41.1% · Promotores (9-10): 38.1%</div>
+      <canvas id="calificaciones"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">NPS por Sucursal vs. Benchmark</div>
+      <div class="chart-subtitle">Net Promoter Score — Mayor es mejor · Centro rezagado 11 pts vs. Angelópolis</div>
+      <canvas id="npsSucursal"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Espera Promedio vs. Umbral Óptimo</div>
+      <div class="chart-subtitle">22 min actual · Objetivo: &lt;15 min · Causa probable del NPS bajo</div>
+      <canvas id="tiempoEspera"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: PRODUCTOS Y CLIENTES -->
+  <div class="section-title">Productos & Perfil de Clientes</div>
+  <div class="chart-grid-2">
+
+    <div class="chart-card">
+      <div class="chart-title">Top 7 Productos por Venta Neta (muestra)</div>
+      <div class="chart-subtitle">Rib Eye = 23.3% de ventas totales · Food cost 44.2% — producto de alto riesgo de margen</div>
+      <canvas id="topProductos"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Clientes por Ciudad y Rango de Edad</div>
+      <div class="chart-subtitle">500 clientes registrados · 60.6% de Puebla · Edad promedio: 43 años</div>
+      <canvas id="demograficos"></canvas>
+    </div>
+
+  </div>
+
+  <!-- TABLA KPIs -->
+  <div class="section-title">Tabla Comparativa de KPIs vs. Benchmark</div>
+  <div class="chart-card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>KPI</th><th>Valor Real</th><th>Benchmark</th><th>Fuente Benchmark</th><th>Brecha</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>NPS Global</strong></td><td>17</td><td>52</td><td>CANIRAC / Archivo simulación</td><td>−35 puntos</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Food Cost % global</strong></td><td>35.4%</td><td>&lt;32%</td><td>CANIRAC</td><td>+3.4 pts</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Food Cost % — Cortes (Rib Eye)</strong></td><td>44.2%</td><td>&lt;40%</td><td>Estándar industria</td><td>+4.2 pts</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Tiempo de espera promedio</strong></td><td>22 min</td><td>&lt;15 min</td><td>Estándar industria</td><td>+7 min</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>NPS Sucursal Centro</strong></td><td>12</td><td>52</td><td>CANIRAC</td><td>−40 puntos</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>No-show rate</strong></td><td>9.6%</td><td>&lt;5%</td><td>Estándar industria</td><td>+4.6 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Calificación promedio</strong></td><td>7.9 / 10</td><td>&gt;8.5</td><td>Estándar industria</td><td>−0.6 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Food Cost % — Cervezas</strong></td><td>41.2%</td><td>&lt;35%</td><td>Estándar industria</td><td>+6.2 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Ticket promedio</strong></td><td>$292</td><td>$290</td><td>Archivo simulación</td><td>+$2</td><td><span class="pill green">🟢 Óptimo</span></td></tr>
+          <tr><td><strong>Retención de clientes</strong></td><td>97.2%</td><td>&gt;70%</td><td>Estándar industria</td><td>+27.2 pts</td><td><span class="pill green">🟢 Excepcional</span></td></tr>
+          <tr><td><strong>Visitas promedio / cliente / año</strong></td><td>12.9</td><td>&gt;6</td><td>Estándar industria</td><td>+6.9 visitas</td><td><span class="pill green">🟢 Excepcional</span></td></tr>
+          <tr><td><strong>% Clientes que recomendarían</strong></td><td>86.8%</td><td>&gt;75%</td><td>Estándar industria</td><td>+11.8 pts</td><td><span class="pill green">🟢 Bueno</span></td></tr>
+          <tr><td><strong>Food Cost % — Postres</strong></td><td>23.3%</td><td>&lt;30%</td><td>CANIRAC</td><td>−6.7 pts</td><td><span class="pill green">🟢 Eficiente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HALLAZGOS -->
+  <div class="section-title">Hallazgos y Recomendaciones por Nivel de Prioridad</div>
+  <div class="hallazgos-grid">
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Acción inmediata</div>
+      <div class="hallazgo-title">NPS 17 — Raíz del problema: tiempo de espera, no insatisfacción</div>
+      <div class="hallazgo-body">
+        El 41.1% de clientes son <strong>pasivos (7-8)</strong>, no detractores. La mayoría viene, le gusta y regresa — pero la experiencia no los sorprende. El tiempo de espera de <strong>22 min</strong> es el factor más probable: convierte visitas buenas en "nada especial". Centro es el foco con NPS 12 vs. 23 de Angelópolis.
+        <br><br><strong>Acción esta semana:</strong> Medir en Centro el tiempo entre que el cliente se sienta y recibe su primera bebida. Objetivo: &lt;8 min. Ese único cambio puede mover el NPS 10+ puntos en 60 días.
+      </div>
+    </div>
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Impacto financiero directo</div>
+      <div class="hallazgo-title">Food Cost del Rib Eye al 44.2% — Producto estrella que erosiona el margen</div>
+      <div class="hallazgo-body">
+        El Rib Eye representa el <strong>23.3% de todas las ventas</strong> pero su food cost destruye el margen: $180 de costo por cada $420 de venta. Es el producto más vendido y el más costoso en ratio.
+        <br><br><strong>Tres opciones:</strong> (1) Renegociar precio con proveedor por volumen. (2) Subir precio a $460-$480. (3) Crear combo que incluya guarnición de alto margen (postres: 23.3% food cost) y elevar ticket sin elevar costo. Reducir de 44% a 38% tiene impacto directo en resultados.
+      </div>
+    </div>
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Dato estratégico faltante</div>
+      <div class="hallazgo-title">Sin captura de ventas totales — El tablero está tapado</div>
+      <div class="hallazgo-body">
+        Los gastos operativos suman <strong>$6.33M anuales</strong>. Sin el total de ventas sistematizado no se puede calcular EBITDA, labor cost % ni punto de equilibrio. Con benchmark de nómina (28%), las ventas implícitas serían <strong>~$15.3M/año</strong>.
+        <br><br><strong>Acción esta semana:</strong> Configurar el POS para exportar ventas totales por día y sucursal. Un solo Excel diario desbloquea todos los KPIs financieros. Costo: $0.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Capacidad perdida</div>
+      <div class="hallazgo-title">No-shows 9.6% — 144 mesas reservadas que nunca llegaron</div>
+      <div class="hallazgo-body">
+        Con ticket promedio $292 y grupos de 5.6 personas por mesa, cada no-show vale ~$1,635 en ventas perdidas. Total estimado en el año: <strong>$235,440 no generados</strong>.
+        <br><br><strong>Solución inmediata:</strong> Confirmación por WhatsApp 24 horas antes. Costo: $0. Expectativa: reducir no-shows a &lt;5%. Si logran esa reducción: +$70K anuales en ventas recuperadas.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Quick win en bebidas</div>
+      <div class="hallazgo-title">Food Cost Cervezas al 41.2% — Oportunidad con artesanales locales</div>
+      <div class="hallazgo-body">
+        La cerveza a $55 tiene menor margen que los postres a $70. Puebla cuenta con productores de cerveza artesanal activos (ZirándaBrew, PRIMUS, Tlapalería Brewing). Costo similar, precio $90-$130, mejor margen y diferenciador de menú.
+        <br><br><strong>Acción:</strong> Incorporar 2-3 cervezas artesanales locales al menú. Mejora margen de categoría de 59% a ~70%+ y fortalece el posicionamiento local.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Brecha operativa entre sucursales</div>
+      <div class="hallazgo-title">Centro (NPS 12) vs. Angelópolis (NPS 23) — 11 puntos de diferencia</div>
+      <div class="hallazgo-body">
+        Las dos sucursales tienen perfiles distintos de satisfacción. Es probable que Angelópolis tenga prácticas operativas (protocolo de bienvenida, mise en place, rotación de mesas) que no se han replicado en Centro.
+        <br><br><strong>Acción:</strong> Visita operativa cruzada: que el gerente de Angelópolis acompañe un turno completo en Centro e identifique las 3 diferencias concretas en proceso.
+      </div>
+    </div>
+
+    <div class="hallazgo-card green">
+      <div class="hallazgo-tag">🟢 Fortaleza excepcional · Base sólida de crecimiento</div>
+      <div class="hallazgo-title">Retención 97.2% y 12.9 visitas/año — Clientes que hacen del restaurante un hábito</div>
+      <div class="hallazgo-body">
+        Esta es la métrica más valiosa del negocio. Los clientes que visitan el restaurante <strong>regresan casi cada mes</strong>. Esto significa que la propuesta de valor funciona: la comida, la ubicación o la experiencia generan frecuencia de visita excepcional.
+        <br><br><strong>Capitalizar:</strong> Programa de lealtad básico (tarjeta de puntos o WhatsApp Business) para convertir este comportamiento espontáneo en compromiso formal. Los clientes frecuentes son el canal de adquisición más barato.
+      </div>
+    </div>
+
+    <div class="hallazgo-card green">
+      <div class="hallazgo-tag">🟢 Fortaleza · Pricing correcto para el mercado</div>
+      <div class="hallazgo-title">Ticket Promedio $292 — Exactamente en benchmark del sector</div>
+      <div class="hallazgo-body">
+        El ticket promedio coincide con el benchmark de $290 para restaurantes PyME. La mezcla de productos y pricing son correctos para el segmento: cliente de 43 años promedio, zona metropolitana Puebla, con alto poder de regreso.
+        <br><br><strong>Próximo nivel:</strong> Con base tan fiel y ticket en benchmark, introducir experiencias premium mensuales (maridaje, menú degustación) podría llevar el ticket a $380-$420 en eventos especiales sin afectar la base.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESUMEN EJECUTIVO -->
+  <div class="section-title">Resumen Ejecutivo</div>
+  <div class="chart-card" style="background:linear-gradient(135deg,#1B3A6B,#243E6E);color:white;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Qué está funcionando</div>
+        <ul style="list-style:none;font-size:.83rem;line-height:1.9;opacity:.9;">
+          <li>✅ Retención excepcional (97.2%)</li>
+          <li>✅ Clientes muy frecuentes (12.9/año)</li>
+          <li>✅ Ticket promedio en benchmark ($292)</li>
+          <li>✅ 86.8% recomendarían el restaurante</li>
+          <li>✅ Postres: food cost eficiente (23.3%)</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Qué necesita atención</div>
+        <ul style="list-style:none;font-size:.83rem;line-height:1.9;opacity:.9;">
+          <li>🔴 NPS en 17 — objetivo mínimo: 40</li>
+          <li>🔴 Espera 22 min → objetivo: &lt;12 min</li>
+          <li>🔴 Food cost Rib Eye 44.2% → meta: 38%</li>
+          <li>🔴 Sin captura de ventas totales</li>
+          <li>🟡 No-shows 9.6% → activar WhatsApp</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Próximos 3 pasos</div>
+        <div style="font-size:.83rem;line-height:1.8;opacity:.9;">
+          <p><strong style="color:#F4A261;">1.</strong> Configurar POS para exportar ventas totales diarias esta semana.</p>
+          <p><strong style="color:#F4A261;">2.</strong> Auditar tiempo de servicio en Centro — foco en primeros 8 min.</p>
+          <p><strong style="color:#F4A261;">3.</strong> Renegociar proveedor de Rib Eye o ajustar precio de venta.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Análisis generado con <strong>Consultor PyME</strong> · Contexto sectorial: DENUE 05/2026, INEGI · Benchmarks operativos: CANIRAC, estándares de industria restaurantera México<br>
+  Puebla, México · Junio 2025 · Estrato PyME 31-50 empleados (SCIAN 722)
+</footer>
+
+<script>
+// Registrar el plugin de etiquetas globalmente
+Chart.register(ChartDataLabels);
+
+const navy='#1B3A6B', green='#00A86B', orange='#F4A261', red='#E63946', yellow='#F9C74F';
+
+Chart.defaults.font = { family:"'Segoe UI', system-ui, sans-serif", size:11 };
+Chart.defaults.color = '#718096';
+
+// Desactivar datalabels por defecto en todos los charts; cada uno los activa explícitamente
+Chart.defaults.plugins.datalabels = { display: false };
+
+// ── 1. VENTAS VS GASTOS ──
+new Chart(document.getElementById('ventasGastos'), {
+  type: 'bar',
+  data: {
+    labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+    datasets: [
+      {
+        label: 'Ventas (muestra)',
+        data: [99845,91381,98902,107991,92897,83940,105379,95123,88490,94766,93118,92828],
+        backgroundColor: green+'99', borderColor: green, borderWidth:2, borderRadius:5, yAxisID:'y'
+      },
+      {
+        label: 'Gastos Operativos Totales',
+        data: [507807,551951,556981,535314,521411,518498,528589,523998,526838,521494,537102,497129],
+        type: 'line', borderColor: red, backgroundColor: red+'18', borderWidth:2.5,
+        fill:true, tension:.35, pointRadius:4, pointBackgroundColor:red, yAxisID:'y'
+      }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    interaction:{ mode:'index', intersect:false },
+    plugins: {
+      legend:{ position:'top' },
+      tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-MX')}` } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 0,
+        anchor:'end', align:'top', offset:2,
+        formatter: v => '$'+(v/1000).toFixed(0)+'K',
+        font:{ size:9, weight:'600' }, color: '#1B6B47'
+      }
+    },
+    scales:{ y:{ ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
+  }
+});
+
+// ── 2. GASTOS DONUT ──
+new Chart(document.getElementById('gastosDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Nómina','Renta','Marketing','Electricidad','Mantenimiento'],
+    datasets:[{
+      data: [4284499,1200082,358344,291840,192347],
+      backgroundColor:[navy,orange,green,'#9B5DE5','#00BBF9'],
+      borderWidth:3, borderColor:'#fff', hoverOffset:8
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins: {
+      legend:{ position:'bottom', labels:{ padding:12, boxWidth:12 } },
+      tooltip:{ callbacks:{ label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString('es-MX')} (${((ctx.parsed/6327113)*100).toFixed(1)}%)` } },
+      datalabels: {
+        display: true,
+        formatter:(v,ctx) => {
+          const pct = ((v/6327113)*100).toFixed(1);
+          return pct+'%';
+        },
+        color:'#fff', font:{ size:11, weight:'700' },
+        textShadowColor:'rgba(0,0,0,0.4)', textShadowBlur:4
+      }
+    },
+    cutout:'58%'
+  }
+});
+
+// ── 3. FOOD COST POR CATEGORÍA ──
+const fcCats = ['Postres','Bebidas','Plato Fuerte','Pastas','Sopas','Hamburguesas','Ensaladas','Entradas','Vinos','Cervezas','Cortes'];
+const fcVals = [23.3,25.8,32.2,31.5,32.4,34.4,37.5,38.6,38.9,41.2,44.2];
+const fcColors = fcVals.map(v => v<=32 ? green : v<=38 ? yellow : red);
+
+new Chart(document.getElementById('foodCostBar'), {
+  type: 'bar',
+  data: {
+    labels: fcCats,
+    datasets: [
+      {
+        label: 'Food Cost %',
+        data: fcVals,
+        backgroundColor: fcColors, borderRadius:4
+      },
+      {
+        label: 'Benchmark 32% (CANIRAC)',
+        data: Array(11).fill(32),
+        type:'line', borderColor:navy, borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false
+      }
+    ]
+  },
+  options: {
+    indexAxis:'y', responsive:true, maintainAspectRatio:true,
+    plugins: {
+      legend:{ position:'top' },
+      tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.x}%` } },
+      datalabels: {
+        display: ctx => ctx.datasetIndex === 0,
+        anchor:'end', align:'right', offset:4,
+        formatter: v => v+'%',
+        font:{ size:10, weight:'700' },
+        color: ctx => ctx.dataset.backgroundColor[ctx.dataIndex]
+      }
+    },
+    scales:{
+      x:{ max:52, ticks:{ callback:v=>v+'%' }, grid:{ color:'#E2E8F0' } }
+    }
+  }
+});
+
+// ── 4. CALIFICACIONES ──
+new Chart(document.getElementById('calificaciones'), {
+  type: 'bar',
+  data: {
+    labels:['6\nDetractor','7\nPasivo','8\nPasivo','9\nPromotor','10\nPromotor'],
+    datasets:[{
+      label: 'Encuestas',
+      data: [166,168,161,158,147],
+      backgroundColor: [red,yellow,yellow,green,green],
+      borderRadius:6
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins: {
+      legend:{ display:false },
+      tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} respuestas (${((ctx.parsed.y/800)*100).toFixed(1)}%)` } },
+      datalabels: {
+        display:true, anchor:'end', align:'top', offset:2,
+        formatter: v => v,
+        font:{ size:11, weight:'700' }, color:navy
+      }
+    },
+    scales:{ y:{ max:200, grid:{ color:'#E2E8F0' } } }
+  }
+});
+
+// ── 5. NPS POR SUCURSAL ──
+new Chart(document.getElementById('npsSucursal'), {
+  type: 'bar',
+  data: {
+    labels: ['NPS Global','Centro','Angelópolis','Benchmark\nCANIRAC'],
+    datasets:[{
+      label: 'NPS',
+      data: [17,12,23,52],
+      backgroundColor:[orange,red,yellow,green],
+      borderRadius:8, borderSkipped:false
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins: {
+      legend:{ display:false },
+      tooltip:{ callbacks:{ label:ctx=>`NPS: ${ctx.parsed.y}` } },
+      datalabels: {
+        display:true, anchor:'end', align:'top', offset:4,
+        formatter: v => v,
+        font:{ size:14, weight:'800' },
+        color: ctx => [orange,red,'#92600A',green][ctx.dataIndex]
+      }
+    },
+    scales:{ y:{ min:0, max:65, grid:{ color:'#E2E8F0' } } }
+  }
+});
+
+// ── 6. TIEMPO DE ESPERA (barras comparativas) ──
+new Chart(document.getElementById('tiempoEspera'), {
+  type: 'bar',
+  data: {
+    labels:['Tiempo actual\n(Global)','Centro','Angelópolis','Objetivo\nóptimo'],
+    datasets:[{
+      label:'Minutos',
+      data:[22,21,22,15],
+      backgroundColor:[red,red,red,green],
+      borderRadius:8, borderSkipped:false
+    }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} minutos` } },
+      datalabels:{
+        display:true, anchor:'end', align:'top', offset:4,
+        formatter: v => v+' min',
+        font:{ size:12, weight:'800' },
+        color: ctx => ctx.dataIndex===3 ? green : red
+      }
+    },
+    scales:{ y:{ min:0, max:28, ticks:{ callback:v=>v+' min' }, grid:{ color:'#E2E8F0' } } }
+  }
+});
+
+// ── 7. TOP PRODUCTOS ──
+new Chart(document.getElementById('topProductos'), {
+  type: 'bar',
+  data: {
+    labels:['Rib Eye','Hamburguesa','Pasta Alfredo','Tacos','Nachos','Vino Copa','Ensalada César'],
+    datasets:[{
+      label:'Venta Neta ($)',
+      data:[266973,141876,110646,108328,77532,76326,70868],
+      backgroundColor:[red,orange,green,navy+'cc','#9B5DE5','#00BBF9','#F9C74F'],
+      borderRadius:5
+    }]
+  },
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:true,
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ callbacks:{ label:ctx=>`$${ctx.parsed.x.toLocaleString('es-MX')}` } },
+      datalabels:{
+        display:true, anchor:'end', align:'right', offset:4,
+        formatter: v => '$'+(v/1000).toFixed(0)+'K',
+        font:{ size:10, weight:'700' },
+        color: ctx => ['#C0392B',orange+'dd',green,navy,'#6B21A8','#0077A8','#92600A'][ctx.dataIndex]
+      }
+    },
+    scales:{
+      x:{ min:0, max:310000, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } }
+    }
+  }
+});
+
+// ── 8. DEMOGRÁFICOS ──
+new Chart(document.getElementById('demograficos'), {
+  type: 'bar',
+  data: {
+    labels:['Puebla\n(303)','Cholula\n(93)','S.A. Cholula\n(53)','Atlixco\n(51)'],
+    datasets:[
+      { label:'18-30',data:[74,25,13,10],backgroundColor:green,borderRadius:3 },
+      { label:'31-40',data:[59,16,11,11],backgroundColor:'#00BBF9',borderRadius:3 },
+      { label:'41-50',data:[59,18,11,9], backgroundColor:yellow,borderRadius:3 },
+      { label:'51-60',data:[64,20,12,8], backgroundColor:orange,borderRadius:3 },
+      { label:'61+',  data:[47,14,6,13], backgroundColor:red,borderRadius:3 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:true,
+    plugins:{
+      legend:{ position:'bottom', labels:{ padding:10, boxWidth:10, font:{size:11} } },
+      tooltip:{ mode:'index', intersect:false },
+      datalabels:{
+        display: ctx => {
+          // Solo mostrar total en el último dataset (stack top)
+          if(ctx.datasetIndex !== 4) return false;
+          return true;
+        },
+        anchor:'end', align:'top', offset:2,
+        formatter:(v,ctx) => {
+          const totals=[303,93,53,51];
+          return totals[ctx.dataIndex];
+        },
+        font:{ size:11, weight:'700' }, color:navy
+      }
+    },
+    scales:{
+      x:{ stacked:true, grid:{ display:false } },
+      y:{ stacked:true, grid:{ color:'#E2E8F0' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
