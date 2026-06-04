@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Restaurante PyME | Puebla 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --navy:#1B3A6B; --navy2:#243E6E; --green:#00A86B; --orange:#F4A261;
+    --red:#E63946; --yellow:#F9C74F; --bg:#F0F2F5; --card:#FFFFFF;
+    --text:#2D3748; --muted:#718096; --border:#E2E8F0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+
+  .header{
+    background:linear-gradient(135deg,#1B3A6B 0%,#243E6E 60%,#1a4d7a 100%);
+    color:white;padding:28px 36px;display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 4px 20px rgba(27,58,107,.4);
+  }
+  .header-left h1{font-size:1.7rem;font-weight:700;letter-spacing:-.5px;}
+  .header-left .subtitle{font-size:.88rem;opacity:.75;margin-top:4px;}
+  .header-right{text-align:right;}
+  .badge{
+    display:inline-block;padding:4px 12px;border-radius:20px;font-size:.75rem;
+    font-weight:600;letter-spacing:.5px;background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.3);margin:2px;
+  }
+  .badge.green{background:#00A86B22;border-color:#00A86B;color:#7fffd4;}
+  .badge.orange{background:#F4A26122;border-color:#F4A261;color:#ffd9b3;}
+
+  .container{max-width:1400px;margin:0 auto;padding:28px 24px;}
+  .section-title{
+    font-size:.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--muted);margin:28px 0 14px;padding-bottom:8px;
+    border-bottom:2px solid var(--border);
+  }
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:16px;}
+  .kpi-card{
+    background:var(--card);border-radius:14px;padding:20px 22px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);border-top:4px solid transparent;
+    transition:transform .2s,box-shadow .2s;
+  }
+  .kpi-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+  .kpi-card.red{border-top-color:var(--red);}
+  .kpi-card.yellow{border-top-color:var(--yellow);}
+  .kpi-card.green{border-top-color:var(--green);}
+  .kpi-icon{font-size:1.6rem;margin-bottom:8px;}
+  .kpi-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);}
+  .kpi-value{font-size:2rem;font-weight:800;color:var(--text);line-height:1.1;margin:6px 0 4px;}
+  .kpi-value.red{color:var(--red);}
+  .kpi-value.yellow{color:#c87d00;}
+  .kpi-value.green{color:var(--green);}
+  .kpi-bench{font-size:.72rem;color:var(--muted);}
+  .kpi-bench span{font-weight:600;}
+  .semaforo{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+  .semaforo.red{background:var(--red);}
+  .semaforo.yellow{background:var(--yellow);}
+  .semaforo.green{background:var(--green);}
+
+  .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+  .chart-card{
+    background:var(--card);border-radius:14px;padding:24px;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+  }
+  .chart-card.wide{grid-column:span 2;}
+  .chart-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .chart-subtitle{font-size:.72rem;color:var(--muted);margin-bottom:18px;}
+  canvas{max-height:280px;}
+
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.83rem;}
+  thead th{
+    background:var(--navy);color:white;padding:10px 14px;
+    text-align:left;font-size:.72rem;letter-spacing:.6px;text-transform:uppercase;
+  }
+  tbody tr:nth-child(even){background:#F7F9FC;}
+  tbody tr:hover{background:#EDF2FF;}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--border);}
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+  }
+  .pill.red{background:#FEE2E2;color:#C0392B;}
+  .pill.yellow{background:#FEF3C7;color:#92600A;}
+  .pill.green{background:#D1FAE5;color:#065F46;}
+
+  .hallazgos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .hallazgo-card{border-radius:14px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+  .hallazgo-card.red{background:#FFF5F5;border-left:5px solid var(--red);}
+  .hallazgo-card.yellow{background:#FFFBEB;border-left:5px solid var(--yellow);}
+  .hallazgo-card.green{background:#F0FFF4;border-left:5px solid var(--green);}
+  .hallazgo-tag{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .hallazgo-card.red .hallazgo-tag{color:var(--red);}
+  .hallazgo-card.yellow .hallazgo-tag{color:#92600A;}
+  .hallazgo-card.green .hallazgo-tag{color:var(--green);}
+  .hallazgo-title{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+  .hallazgo-body{font-size:.8rem;color:var(--muted);line-height:1.55;}
+  .hallazgo-body strong{color:var(--text);}
+
+  .data-note{
+    background:#EBF4FF;border:1px solid #BEE3F8;border-radius:10px;
+    padding:12px 18px;font-size:.78rem;color:#2B6CB0;margin-bottom:20px;line-height:1.5;
+  }
+  .data-note strong{color:#1A365D;}
+  .source-note{
+    background:#F0FFF4;border:1px solid #9AE6B4;border-radius:10px;
+    padding:12px 18px;font-size:.76rem;color:#276749;margin-bottom:12px;line-height:1.6;
+  }
+  .source-note strong{color:#1C4532;}
+
+  footer{
+    text-align:center;padding:24px;font-size:.72rem;color:var(--muted);
+    border-top:1px solid var(--border);margin-top:40px;
+  }
+  @media(max-width:768px){
+    .chart-grid-2,.chart-grid-3{grid-template-columns:1fr;}
+    .chart-card.wide{grid-column:span 1;}
+    .header{flex-direction:column;gap:14px;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🍽️ Restaurante PyME — Dashboard de Desempeño</h1>
+    <div class="subtitle">Análisis integral 2025 · Dos sucursales (Centro + Angelópolis) · Consultoría PyME Puebla</div>
+  </div>
+  <div class="header-right">
+    <div><span class="badge">Sector: Alimentos y Bebidas</span> <span class="badge">SCIAN: 722</span></div>
+    <div style="margin-top:6px"><span class="badge green">Estrato: Pequeña (31-50 emp.)</span> <span class="badge orange">Puebla — #3 nacional DENUE</span></div>
+    <div style="margin-top:8px;font-size:.72rem;opacity:.6;">Generado: Junio 2025 · 5,000 transacciones · 800 encuestas · 1,500 reservaciones</div>
+    <div id="data-source-badge" style="margin-top:6px;font-size:.7rem;font-weight:600;letter-spacing:.3px;">⏳ Cargando datos…</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="data-note">
+    ℹ️ <strong>Nota metodológica:</strong> El archivo de ventas contiene una <strong>muestra representativa de 5,000 transacciones</strong>. Los KPIs de ratio (food cost %, ticket promedio, mix de productos, estacionalidad) son válidos a partir de la muestra. Los KPIs de volumen absoluto (EBITDA, labor cost %) requieren el total de ventas del año — su captura sistematizada es una recomendación crítica de este análisis. Ventas implícitas estimadas con benchmark de nómina: <strong>~$15.3M anuales</strong> (ambas sucursales).
+  </div>
+
+  <div class="source-note">
+    📚 <strong>Fuente de benchmarks:</strong> Los rangos operativos (food cost, NPS, no-shows, tiempo de espera) provienen de estándares de la industria restaurantera — principalmente <strong>CANIRAC</strong> y el archivo <strong>Benchmark_Industria.csv</strong> incluido en los datos de simulación. El <strong>DENUE 05/2026 / INEGI</strong> es la fuente para contexto sectorial de Puebla (volumen de unidades, estratificación, clasificación SCIAN) — no publica benchmarks operativos. Para benchmarks oficiales de márgenes por sector, consultar los <strong>Censos Económicos INEGI 2024</strong>.
+  </div>
+
+  <!-- KPIs -->
+  <div class="section-title">Indicadores Clave de Desempeño (KPIs)</div>
+  <div class="kpi-grid">
+    <div class="kpi-card red">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">NPS Global</div>
+      <div class="kpi-value red" id="kv-nps">17</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>Benchmark CANIRAC: <span>52</span> · −35 pts</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">🎫</div>
+      <div class="kpi-label">Ticket Promedio</div>
+      <div class="kpi-value green" id="kv-ticket">$292</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>$290</span> · En objetivo</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">🥩</div>
+      <div class="kpi-label">Food Cost %</div>
+      <div class="kpi-value red">35.4%</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>CANIRAC: <span>&lt;32%</span> · +3.4 pts</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">No-Shows</div>
+      <div class="kpi-value yellow" id="kv-noshow">9.6%</div>
+      <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&lt;5%</span> · +4.6 pts</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">🔄</div>
+      <div class="kpi-label">Retención Clientes</div>
+      <div class="kpi-value green" id="kv-retencion">97.2%</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Benchmark: <span>&gt;70%</span> · Excepcional</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">⭐</div>
+      <div class="kpi-label">Calificación Prom.</div>
+      <div class="kpi-value yellow" id="kv-calificacion">7.9</div>
+      <div class="kpi-bench"><span class="semaforo yellow"></span>Óptimo: <span>&gt;8.5</span> · −0.6 pts</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-label">Espera Promedio</div>
+      <div class="kpi-value red" id="kv-espera">22 min</div>
+      <div class="kpi-bench"><span class="semaforo red"></span>Óptimo: <span>&lt;15 min</span> · +7 min</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">Visitas / Cliente / Año</div>
+      <div class="kpi-value green" id="kv-visitas">12.9</div>
+      <div class="kpi-bench"><span class="semaforo green"></span>Óptimo: <span>&gt;6</span> · Excelente</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: VENTAS Y GASTOS -->
+  <div class="section-title">Ventas — Estacionalidad & Estructura de Costos</div>
+  <div class="chart-grid-2">
+
+    <div class="chart-card wide">
+      <div class="chart-title">Ventas Mensuales (muestra) vs. Gastos Operativos Totales — 2025</div>
+      <div class="chart-subtitle">Pico de ventas: Abril ($108K) y Julio ($105K) · Valle: Junio ($84K) · Gastos estables ~$527K/mes</div>
+      <canvas id="ventasGastos"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Estructura de Gastos Operativos Anuales</div>
+      <div class="chart-subtitle">Total real: $6,327,113 MXN · Nómina = 67.7% de los gastos totales</div>
+      <canvas id="gastosDonut"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Food Cost % por Categoría</div>
+      <div class="chart-subtitle">Línea punteada = benchmark CANIRAC 32% · Rojo &gt;38% · Verde &lt;32%</div>
+      <canvas id="foodCostBar"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: NPS Y SATISFACCIÓN -->
+  <div class="section-title">Satisfacción del Cliente & NPS — Correlación con Tiempo de Espera</div>
+  <div class="chart-grid-3">
+
+    <div class="chart-card">
+      <div class="chart-title">Distribución de Calificaciones</div>
+      <div class="chart-subtitle">800 encuestas · Detractores (6): 20.8% · Pasivos (7-8): 41.1% · Promotores (9-10): 38.1%</div>
+      <canvas id="calificaciones"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">NPS por Sucursal vs. Benchmark</div>
+      <div class="chart-subtitle">Net Promoter Score — Mayor es mejor · Centro rezagado 11 pts vs. Angelópolis</div>
+      <canvas id="npsSucursal"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Espera Promedio vs. Umbral Óptimo</div>
+      <div class="chart-subtitle">22 min actual · Objetivo: &lt;15 min · Causa probable del NPS bajo</div>
+      <canvas id="tiempoEspera"></canvas>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: PRODUCTOS Y CLIENTES -->
+  <div class="section-title">Productos & Perfil de Clientes</div>
+  <div class="chart-grid-2">
+
+    <div class="chart-card">
+      <div class="chart-title">Top 7 Productos por Venta Neta (muestra)</div>
+      <div class="chart-subtitle" id="subtitle-top-productos">Rib Eye = 23.3% de ventas totales · Food cost 44.2% — producto de alto riesgo de margen</div>
+      <canvas id="topProductos"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Clientes por Ciudad y Rango de Edad</div>
+      <div class="chart-subtitle">500 clientes registrados · 60.6% de Puebla · Edad promedio: 43 años</div>
+      <canvas id="demograficos"></canvas>
+    </div>
+
+  </div>
+
+  <!-- TABLA KPIs -->
+  <div class="section-title">Tabla Comparativa de KPIs vs. Benchmark</div>
+  <div class="chart-card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>KPI</th><th>Valor Real</th><th>Benchmark</th><th>Fuente Benchmark</th><th>Brecha</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>NPS Global</strong></td><td>17</td><td>52</td><td>CANIRAC / Archivo simulación</td><td>−35 puntos</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Food Cost % global</strong></td><td>35.4%</td><td>&lt;32%</td><td>CANIRAC</td><td>+3.4 pts</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Food Cost % — Cortes (Rib Eye)</strong></td><td>44.2%</td><td>&lt;40%</td><td>Estándar industria</td><td>+4.2 pts</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>Tiempo de espera promedio</strong></td><td>22 min</td><td>&lt;15 min</td><td>Estándar industria</td><td>+7 min</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>NPS Sucursal Centro</strong></td><td>12</td><td>52</td><td>CANIRAC</td><td>−40 puntos</td><td><span class="pill red">🔴 Crítico</span></td></tr>
+          <tr><td><strong>No-show rate</strong></td><td>9.6%</td><td>&lt;5%</td><td>Estándar industria</td><td>+4.6 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Calificación promedio</strong></td><td>7.9 / 10</td><td>&gt;8.5</td><td>Estándar industria</td><td>−0.6 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Food Cost % — Cervezas</strong></td><td>41.2%</td><td>&lt;35%</td><td>Estándar industria</td><td>+6.2 pts</td><td><span class="pill yellow">🟡 Alerta</span></td></tr>
+          <tr><td><strong>Ticket promedio</strong></td><td>$292</td><td>$290</td><td>Archivo simulación</td><td>+$2</td><td><span class="pill green">🟢 Óptimo</span></td></tr>
+          <tr><td><strong>Retención de clientes</strong></td><td>97.2%</td><td>&gt;70%</td><td>Estándar industria</td><td>+27.2 pts</td><td><span class="pill green">🟢 Excepcional</span></td></tr>
+          <tr><td><strong>Visitas promedio / cliente / año</strong></td><td>12.9</td><td>&gt;6</td><td>Estándar industria</td><td>+6.9 visitas</td><td><span class="pill green">🟢 Excepcional</span></td></tr>
+          <tr><td><strong>% Clientes que recomendarían</strong></td><td>86.8%</td><td>&gt;75%</td><td>Estándar industria</td><td>+11.8 pts</td><td><span class="pill green">🟢 Bueno</span></td></tr>
+          <tr><td><strong>Food Cost % — Postres</strong></td><td>23.3%</td><td>&lt;30%</td><td>CANIRAC</td><td>−6.7 pts</td><td><span class="pill green">🟢 Eficiente</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- HALLAZGOS -->
+  <div class="section-title">Hallazgos y Recomendaciones por Nivel de Prioridad</div>
+  <div class="hallazgos-grid">
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Acción inmediata</div>
+      <div class="hallazgo-title">NPS 17 — Raíz del problema: tiempo de espera, no insatisfacción</div>
+      <div class="hallazgo-body">
+        El 41.1% de clientes son <strong>pasivos (7-8)</strong>, no detractores. La mayoría viene, le gusta y regresa — pero la experiencia no los sorprende. El tiempo de espera de <strong>22 min</strong> es el factor más probable: convierte visitas buenas en "nada especial". Centro es el foco con NPS 12 vs. 23 de Angelópolis.
+        <br><br><strong>Acción esta semana:</strong> Medir en Centro el tiempo entre que el cliente se sienta y recibe su primera bebida. Objetivo: &lt;8 min. Ese único cambio puede mover el NPS 10+ puntos en 60 días.
+      </div>
+    </div>
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Impacto financiero directo</div>
+      <div class="hallazgo-title" id="hallazgo-estrella-title">Food Cost del Rib Eye al 44.2% — Producto estrella que erosiona el margen</div>
+      <div class="hallazgo-body" id="hallazgo-estrella-body">
+        El Rib Eye representa el <strong>23.3% de todas las ventas</strong> pero su food cost destruye el margen: $180 de costo por cada $420 de venta. Es el producto más vendido y el más costoso en ratio.
+        <br><br><strong>Tres opciones:</strong> (1) Renegociar precio con proveedor por volumen. (2) Subir precio a $460-$480. (3) Crear combo que incluya guarnición de alto margen (postres: 23.3% food cost) y elevar ticket sin elevar costo. Reducir de 44% a 38% tiene impacto directo en resultados.
+      </div>
+    </div>
+
+    <div class="hallazgo-card red">
+      <div class="hallazgo-tag">🔴 Crítico · Dato estratégico faltante</div>
+      <div class="hallazgo-title">Sin captura de ventas totales — El tablero está tapado</div>
+      <div class="hallazgo-body">
+        Los gastos operativos suman <strong>$6.33M anuales</strong>. Sin el total de ventas sistematizado no se puede calcular EBITDA, labor cost % ni punto de equilibrio. Con benchmark de nómina (28%), las ventas implícitas serían <strong>~$15.3M/año</strong>.
+        <br><br><strong>Acción esta semana:</strong> Configurar el POS para exportar ventas totales por día y sucursal. Un solo Excel diario desbloquea todos los KPIs financieros. Costo: $0.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Capacidad perdida</div>
+      <div class="hallazgo-title">No-shows 9.6% — 144 mesas reservadas que nunca llegaron</div>
+      <div class="hallazgo-body">
+        Con ticket promedio $292 y grupos de 5.6 personas por mesa, cada no-show vale ~$1,635 en ventas perdidas. Total estimado en el año: <strong>$235,440 no generados</strong>.
+        <br><br><strong>Solución inmediata:</strong> Confirmación por WhatsApp 24 horas antes. Costo: $0. Expectativa: reducir no-shows a &lt;5%. Si logran esa reducción: +$70K anuales en ventas recuperadas.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Quick win en bebidas</div>
+      <div class="hallazgo-title">Food Cost Cervezas al 41.2% — Oportunidad con artesanales locales</div>
+      <div class="hallazgo-body">
+        La cerveza a $55 tiene menor margen que los postres a $70. Puebla cuenta con productores de cerveza artesanal activos (ZirándaBrew, PRIMUS, Tlapalería Brewing). Costo similar, precio $90-$130, mejor margen y diferenciador de menú.
+        <br><br><strong>Acción:</strong> Incorporar 2-3 cervezas artesanales locales al menú. Mejora margen de categoría de 59% a ~70%+ y fortalece el posicionamiento local.
+      </div>
+    </div>
+
+    <div class="hallazgo-card yellow">
+      <div class="hallazgo-tag">🟡 Oportunidad · Brecha operativa entre sucursales</div>
+      <div class="hallazgo-title">Centro (NPS 12) vs. Angelópolis (NPS 23) — 11 puntos de diferencia</div>
+      <div class="hallazgo-body">
+        Las dos sucursales tienen perfiles distintos de satisfacción. Es probable que Angelópolis tenga prácticas operativas (protocolo de bienvenida, mise en place, rotación de mesas) que no se han replicado en Centro.
+        <br><br><strong>Acción:</strong> Visita operativa cruzada: que el gerente de Angelópolis acompañe un turno completo en Centro e identifique las 3 diferencias concretas en proceso.
+      </div>
+    </div>
+
+    <div class="hallazgo-card green">
+      <div class="hallazgo-tag">🟢 Fortaleza excepcional · Base sólida de crecimiento</div>
+      <div class="hallazgo-title">Retención 97.2% y 12.9 visitas/año — Clientes que hacen del restaurante un hábito</div>
+      <div class="hallazgo-body">
+        Esta es la métrica más valiosa del negocio. Los clientes que visitan el restaurante <strong>regresan casi cada mes</strong>. Esto significa que la propuesta de valor funciona: la comida, la ubicación o la experiencia generan frecuencia de visita excepcional.
+        <br><br><strong>Capitalizar:</strong> Programa de lealtad básico (tarjeta de puntos o WhatsApp Business) para convertir este comportamiento espontáneo en compromiso formal. Los clientes frecuentes son el canal de adquisición más barato.
+      </div>
+    </div>
+
+    <div class="hallazgo-card green">
+      <div class="hallazgo-tag">🟢 Fortaleza · Pricing correcto para el mercado</div>
+      <div class="hallazgo-title">Ticket Promedio $292 — Exactamente en benchmark del sector</div>
+      <div class="hallazgo-body">
+        El ticket promedio coincide con el benchmark de $290 para restaurantes PyME. La mezcla de productos y pricing son correctos para el segmento: cliente de 43 años promedio, zona metropolitana Puebla, con alto poder de regreso.
+        <br><br><strong>Próximo nivel:</strong> Con base tan fiel y ticket en benchmark, introducir experiencias premium mensuales (maridaje, menú degustación) podría llevar el ticket a $380-$420 en eventos especiales sin afectar la base.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESUMEN EJECUTIVO -->
+  <div class="section-title">Resumen Ejecutivo</div>
+  <div class="chart-card" style="background:linear-gradient(135deg,#1B3A6B,#243E6E);color:white;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Qué está funcionando</div>
+        <ul style="list-style:none;font-size:.83rem;line-height:1.9;opacity:.9;">
+          <li>✅ Retención excepcional (97.2%)</li>
+          <li>✅ Clientes muy frecuentes (12.9/año)</li>
+          <li>✅ Ticket promedio en benchmark ($292)</li>
+          <li>✅ 86.8% recomendarían el restaurante</li>
+          <li>✅ Postres: food cost eficiente (23.3%)</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Qué necesita atención</div>
+        <ul style="list-style:none;font-size:.83rem;line-height:1.9;opacity:.9;">
+          <li>🔴 NPS en 17 — objetivo mínimo: 40</li>
+          <li>🔴 Espera 22 min → objetivo: &lt;12 min</li>
+          <li id="resumen-food-cost">🔴 Food cost Rib Eye 44.2% → meta: 38%</li>
+          <li>🔴 Sin captura de ventas totales</li>
+          <li>🟡 No-shows 9.6% → activar WhatsApp</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;opacity:.6;margin-bottom:8px;">Próximos 3 pasos</div>
+        <div style="font-size:.83rem;line-height:1.8;opacity:.9;">
+          <p><strong style="color:#F4A261;">1.</strong> Configurar POS para exportar ventas totales diarias esta semana.</p>
+          <p><strong style="color:#F4A261;">2.</strong> Auditar tiempo de servicio en Centro — foco en primeros 8 min.</p>
+          <p><strong style="color:#F4A261;">3.</strong> Renegociar proveedor de Rib Eye o ajustar precio de venta.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Análisis generado con <strong>Consultor PyME</strong> · Contexto sectorial: DENUE 05/2026, INEGI · Benchmarks operativos: CANIRAC, estándares de industria restaurantera México<br>
+  Puebla, México · Junio 2025 · Estrato PyME 31-50 empleados (SCIAN 722)
+</footer>
+
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.font = { family:"'Segoe UI', system-ui, sans-serif", size:11 };
+Chart.defaults.color = '#718096';
+Chart.defaults.plugins.datalabels = { display: false };
+
+const navy='#1B3A6B', green='#00A86B', orange='#F4A261', red='#E63946', yellow='#F9C74F';
+
+// Hojas de Google Sheets — una URL por fuente de datos
+const URLS = {
+  ventas:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=221890987&single=true&output=csv',
+  clientes:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1149480486&single=true&output=csv',
+  gastos:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=909025389&single=true&output=csv',
+  personal:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=849771124&single=true&output=csv',
+  encuestas:     'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1587933693&single=true&output=csv',
+  reservaciones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtWydgif_Q9MGOsgBh42FtNWqn5_jkj6vKp3vsKmkoS58dQmWYn_sD9y_NM5POAA/pub?gid=1134240889&single=true&output=csv'
+};
+
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const PROD_COLORS = [red, orange, green, navy+'cc', '#9B5DE5', '#00BBF9', '#F9C74F'];
+const BAND_COLORS = [green, '#00BBF9', yellow, orange, red];
+const BAND_LABELS = ['18-30','31-40','41-50','51-60','61+'];
+
+// Datos de respaldo — se usan si el CSV no carga o le faltan secciones
+const DEF = {
+  ventas:  [99845,91381,98902,107991,92897,83940,105379,95123,88490,94766,93118,92828],
+  gastos:  [507807,551951,556981,535314,521411,518498,528589,523998,526838,521494,537102,497129],
+  gastosLabels: ['Nómina','Renta','Marketing','Electricidad','Mantenimiento'],
+  gastosVals:   [4284499,1200082,358344,291840,192347],
+  fcCats:  ['Postres','Bebidas','Plato Fuerte','Pastas','Sopas','Hamburguesas','Ensaladas','Entradas','Vinos','Cervezas','Cortes'],
+  fcVals:  [23.3,25.8,32.2,31.5,32.4,34.4,37.5,38.6,38.9,41.2,44.2],
+  cal:     [166,168,161,158,147],
+  nps:     [17,12,23,52],
+  espera:  [22,21,22,15],
+  prodLabels: ['Rib Eye','Hamburguesa','Pasta Alfredo','Tacos','Nachos','Vino Copa','Ensalada César'],
+  prodVals:   [266973,141876,110646,108328,77532,76326,70868],
+  demoLabels: ['Puebla\n(303)','Cholula\n(93)','S.A. Cholula\n(53)','Atlixco\n(51)'],
+  demoTotals: [303,93,53,51],
+  demoBands:  [[74,59,59,64,47],[25,16,18,20,14],[13,11,11,12,6],[10,11,9,8,13]]
+};
+
+// ── UI ─────────────────────────────────────────────────────────
+function showLoader(on) {
+  let el = document.getElementById('_loader');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_loader';
+    el.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:4px;background:linear-gradient(90deg,#00A86B,#1B3A6B);z-index:9999;transition:opacity .4s;';
+    document.head.insertAdjacentHTML('beforeend', '<style>@keyframes _lpulse{0%,100%{opacity:.5}50%{opacity:1}}#_loader{animation:_lpulse .8s ease-in-out infinite}</style>');
+    document.body.prepend(el);
+  }
+  el.style.opacity = on ? '1' : '0';
+}
+
+function showError(msg) {
+  let el = document.getElementById('_err');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_err';
+    el.style.cssText = 'background:#FFF5F5;border:2px solid #E63946;border-radius:10px;padding:14px 20px;margin:0 0 20px;font-size:.82rem;color:#C0392B;line-height:1.6;';
+    document.querySelector('.container').prepend(el);
+  }
+  el.innerHTML = `⚠️ <strong>Error al cargar datos desde Google Sheets:</strong> ${msg}<br>
+    <span style="color:#718096;font-size:.76rem">Se muestran los últimos datos guardados como referencia. Verifica que la hoja esté publicada como CSV y que las columnas sigan el formato indicado en el código.</span>`;
+}
+
+// ── CSV PARSER ─────────────────────────────────────────────────
+function csvSplitLine(line) {
+  const res = []; let cur = ''; let inQ = false;
+  for (const c of line) {
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { res.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  res.push(cur);
+  return res;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = csvSplitLine(lines[0]).map(h => h.trim().toLowerCase());
+  return lines.slice(1).map(line => {
+    const vals = csvSplitLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v !== ''));
+}
+
+// ── DATA MAPPING ───────────────────────────────────────────────
+function mapRows(rows) {
+  const n = s => parseFloat((s || '').replace(/[$,%\s]/g, '')) || 0;
+  const D = JSON.parse(JSON.stringify(DEF));
+
+  const by = {};
+  rows.forEach(r => {
+    const sec = (r.seccion || '').toLowerCase().trim();
+    if (!by[sec]) by[sec] = [];
+    by[sec].push(r);
+  });
+
+  if (by['ventas']) {
+    const vm = {}, gm = {};
+    by['ventas'].forEach(r => { const e = (r.etiqueta||'').trim(); vm[e]=n(r.v1); if(r.v2) gm[e]=n(r.v2); });
+    MONTHS.forEach((m,i) => { if (vm[m] !== undefined) D.ventas[i]=vm[m]; if (gm[m] !== undefined) D.gastos[i]=gm[m]; });
+  }
+
+  if (by['gastos']) {
+    const labels=[], vals=[];
+    by['gastos'].forEach(r => { labels.push((r.etiqueta||'').trim()); vals.push(n(r.v1)); });
+    if (labels.length) { D.gastosLabels=labels; D.gastosVals=vals; }
+  }
+
+  if (by['foodcost']) {
+    const cats=[], fv=[];
+    by['foodcost'].forEach(r => { cats.push((r.etiqueta||'').trim()); fv.push(n(r.v1)); });
+    if (cats.length) { D.fcCats=cats; D.fcVals=fv; }
+  }
+
+  if (by['calificaciones']) {
+    const cm={};
+    by['calificaciones'].forEach(r => { cm[(r.etiqueta||'').trim()]=n(r.v1); });
+    [6,7,8,9,10].forEach((k,i) => { if (cm[String(k)]!==undefined) D.cal[i]=cm[String(k)]; });
+  }
+
+  if (by['nps']) {
+    const nm={};
+    by['nps'].forEach(r => { nm[(r.etiqueta||'').trim().toLowerCase()]=n(r.v1); });
+    if (nm['global']!==undefined)    D.nps[0]=nm['global'];
+    if (nm['centro']!==undefined)    D.nps[1]=nm['centro'];
+    const ang = nm['angelópolis']??nm['angelopolis'];
+    if (ang!==undefined)             D.nps[2]=ang;
+    if (nm['benchmark']!==undefined) D.nps[3]=nm['benchmark'];
+  }
+
+  if (by['espera']) {
+    const em={};
+    by['espera'].forEach(r => { em[(r.etiqueta||'').trim().toLowerCase()]=n(r.v1); });
+    if (em['global']!==undefined)    D.espera[0]=em['global'];
+    if (em['centro']!==undefined)    D.espera[1]=em['centro'];
+    const ang = em['angelópolis']??em['angelopolis'];
+    if (ang!==undefined)             D.espera[2]=ang;
+    const opt = em['óptimo']??em['optimo'];
+    if (opt!==undefined)             D.espera[3]=opt;
+  }
+
+  if (by['productos']) {
+    const pl=[], pv=[];
+    by['productos'].forEach(r => { pl.push((r.etiqueta||'').trim()); pv.push(n(r.v1)); });
+    if (pl.length) { D.prodLabels=pl; D.prodVals=pv; }
+  }
+
+  if (by['demo']) {
+    const dl=[], dt=[], db=[];
+    by['demo'].forEach(r => {
+      const etq=(r.etiqueta||'').trim();
+      const m=etq.match(/\((\d+)\)/);
+      const tot=m?parseInt(m[1]):0;
+      dl.push(etq.replace(/\s*\(\d+\)/,'').trim()+'\n('+(tot||'?')+')');
+      dt.push(tot);
+      db.push([n(r.v1),n(r.v2),n(r.v3),n(r.v4),n(r.v5)]);
+    });
+    if (dl.length) { D.demoLabels=dl; D.demoTotals=dt; D.demoBands=db; }
+  }
+
+  return D;
+}
+
+// ── CHARTS ─────────────────────────────────────────────────────
+let _charts = {};
+
+function buildCharts(D) {
+  Object.values(_charts).forEach(c => c.destroy());
+  _charts = {};
+
+  const gastosTotal = D.gastosVals.reduce((a,b)=>a+b,0);
+  const calTotal    = D.cal.reduce((a,b)=>a+b,0);
+  const fcColors    = D.fcVals.map(v => v<=32?green:v<=38?yellow:red);
+  const npsMax      = Math.max(...D.nps)*1.3;
+  const esperaMax   = Math.max(...D.espera)*1.3;
+  const prodMax     = Math.max(...D.prodVals)*1.22;
+
+  // 1 — VENTAS VS GASTOS
+  _charts.vg = new Chart(document.getElementById('ventasGastos'), {
+    type:'bar',
+    data:{
+      labels: MONTHS,
+      datasets:[
+        { label:'Ventas (muestra)', data:D.ventas,
+          backgroundColor:green+'99', borderColor:green, borderWidth:2, borderRadius:5, yAxisID:'y' },
+        { label:'Gastos Operativos Totales', data:D.gastos,
+          type:'line', borderColor:red, backgroundColor:red+'18', borderWidth:2.5,
+          fill:true, tension:.35, pointRadius:4, pointBackgroundColor:red, yAxisID:'y' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-MX')}` } },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===0,
+          anchor:'end', align:'top', offset:2,
+          formatter:v=>'$'+(v/1000).toFixed(0)+'K',
+          font:{ size:9, weight:'600' }, color:'#1B6B47'
+        }
+      },
+      scales:{ y:{ ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 2 — GASTOS DONUT
+  _charts.gd = new Chart(document.getElementById('gastosDonut'), {
+    type:'doughnut',
+    data:{
+      labels: D.gastosLabels,
+      datasets:[{ data:D.gastosVals,
+        backgroundColor:[navy,orange,green,'#9B5DE5','#00BBF9'],
+        borderWidth:3, borderColor:'#fff', hoverOffset:8 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:12, boxWidth:12 } },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.label}: $${ctx.parsed.toLocaleString('es-MX')} (${((ctx.parsed/gastosTotal)*100).toFixed(1)}%)` } },
+        datalabels:{ display:true,
+          formatter:v=>((v/gastosTotal)*100).toFixed(1)+'%',
+          color:'#fff', font:{ size:11, weight:'700' },
+          textShadowColor:'rgba(0,0,0,0.4)', textShadowBlur:4 }
+      },
+      cutout:'58%'
+    }
+  });
+
+  // 3 — FOOD COST
+  _charts.fc = new Chart(document.getElementById('foodCostBar'), {
+    type:'bar',
+    data:{
+      labels: D.fcCats,
+      datasets:[
+        { label:'Food Cost %', data:D.fcVals, backgroundColor:fcColors, borderRadius:4 },
+        { label:'Benchmark 32% (CANIRAC)', data:Array(D.fcCats.length).fill(32),
+          type:'line', borderColor:navy, borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false }
+      ]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.x}%` } },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===0,
+          anchor:'end', align:'right', offset:4,
+          formatter:v=>v+'%',
+          font:{ size:10, weight:'700' },
+          color:ctx=>fcColors[ctx.dataIndex]
+        }
+      },
+      scales:{ x:{ max:Math.max(...D.fcVals)*1.18, ticks:{ callback:v=>v+'%' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 4 — CALIFICACIONES
+  _charts.cal = new Chart(document.getElementById('calificaciones'), {
+    type:'bar',
+    data:{
+      labels:['6\nDetractor','7\nPasivo','8\nPasivo','9\nPromotor','10\nPromotor'],
+      datasets:[{ label:'Encuestas', data:D.cal,
+        backgroundColor:[red,yellow,yellow,green,green], borderRadius:6 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} respuestas (${((ctx.parsed.y/calTotal)*100).toFixed(1)}%)` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:2,
+          formatter:v=>v, font:{ size:11, weight:'700' }, color:navy }
+      },
+      scales:{ y:{ max:Math.max(...D.cal)*1.25, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 5 — NPS POR SUCURSAL
+  _charts.nps = new Chart(document.getElementById('npsSucursal'), {
+    type:'bar',
+    data:{
+      labels:['NPS Global','Centro','Angelópolis','Benchmark\nCANIRAC'],
+      datasets:[{ label:'NPS', data:D.nps,
+        backgroundColor:[orange,red,yellow,green], borderRadius:8, borderSkipped:false }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`NPS: ${ctx.parsed.y}` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:4,
+          formatter:v=>v, font:{ size:14, weight:'800' },
+          color:ctx=>[orange,red,'#92600A',green][ctx.dataIndex] }
+      },
+      scales:{ y:{ min:0, max:npsMax, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 6 — TIEMPO DE ESPERA
+  const esperaColors = D.espera.map((_,i)=>i===D.espera.length-1?green:red);
+  _charts.esp = new Chart(document.getElementById('tiempoEspera'), {
+    type:'bar',
+    data:{
+      labels:['Tiempo actual\n(Global)','Centro','Angelópolis','Objetivo\nóptimo'],
+      datasets:[{ label:'Minutos', data:D.espera,
+        backgroundColor:esperaColors, borderRadius:8, borderSkipped:false }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`${ctx.parsed.y} minutos` } },
+        datalabels:{ display:true, anchor:'end', align:'top', offset:4,
+          formatter:v=>v+' min', font:{ size:12, weight:'800' },
+          color:ctx=>esperaColors[ctx.dataIndex] }
+      },
+      scales:{ y:{ min:0, max:esperaMax, ticks:{ callback:v=>v+' min' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 7 — TOP PRODUCTOS
+  _charts.prod = new Chart(document.getElementById('topProductos'), {
+    type:'bar',
+    data:{
+      labels: D.prodLabels,
+      datasets:[{ label:'Venta Neta ($)', data:D.prodVals,
+        backgroundColor:D.prodLabels.map((_,i)=>PROD_COLORS[i%PROD_COLORS.length]),
+        borderRadius:5 }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>`$${ctx.parsed.x.toLocaleString('es-MX')}` } },
+        datalabels:{ display:true, anchor:'end', align:'right', offset:4,
+          formatter:v=>'$'+(v/1000).toFixed(0)+'K', font:{ size:10, weight:'700' },
+          color:ctx=>PROD_COLORS[ctx.dataIndex%PROD_COLORS.length] }
+      },
+      scales:{ x:{ min:0, max:prodMax, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K' }, grid:{ color:'#E2E8F0' } } }
+    }
+  });
+
+  // 8 — DEMOGRÁFICOS
+  // D.demoBands[city][ageGroup] → transpose to datasets[ageGroup][city]
+  const demoDatasets = BAND_LABELS.map((lbl,bi)=>({
+    label:lbl, data:D.demoBands.map(city=>city[bi]),
+    backgroundColor:BAND_COLORS[bi], borderRadius:3
+  }));
+  _charts.demo = new Chart(document.getElementById('demograficos'), {
+    type:'bar',
+    data:{ labels:D.demoLabels, datasets:demoDatasets },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ padding:10, boxWidth:10, font:{size:11} } },
+        tooltip:{ mode:'index', intersect:false },
+        datalabels:{
+          display:ctx=>ctx.datasetIndex===demoDatasets.length-1,
+          anchor:'end', align:'top', offset:2,
+          formatter:(_,ctx)=>D.demoTotals[ctx.dataIndex]||'',
+          font:{ size:11, weight:'700' }, color:navy
+        }
+      },
+      scales:{
+        x:{ stacked:true, grid:{ display:false } },
+        y:{ stacked:true, grid:{ color:'#E2E8F0' } }
+      }
+    }
+  });
+}
+
+// ── HELPERS ────────────────────────────────────────────────────
+function parseMonthIndex(fechaStr) {
+  if (!fechaStr) return -1;
+  let m = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return parseInt(m[2]) - 1;
+  m = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return parseInt(m[2]) - 1;
+  return -1;
+}
+const num = s => parseFloat((s||'').replace(/[$,\s]/g,'')) || 0;
+
+// ── SHEET PROCESSORS ──────────────────────────────────────────
+
+function applyTransactions(rows, D) {
+  if (!rows.length) return;
+  const monthlyVentas = new Array(12).fill(0);
+  const prodMap = {}, ticketMap = {};
+  rows.forEach(r => {
+    const venta   = num(r.venta_neta);
+    const mi      = parseMonthIndex(r.fecha);
+    const prod    = (r.producto || '').trim();
+    const ticket  = (r.ticket   || '').trim();
+    if (mi >= 0)   monthlyVentas[mi] += venta;
+    if (prod)      prodMap[prod]   = (prodMap[prod]   || 0) + venta;
+    if (ticket)    ticketMap[ticket] = (ticketMap[ticket] || 0) + venta;
+  });
+  if (monthlyVentas.some(v => v > 0)) D.ventas = monthlyVentas.map(v => Math.round(v));
+  const sorted = Object.entries(prodMap).sort((a,b) => b[1]-a[1]).slice(0,7);
+  if (sorted.length) { D.prodLabels = sorted.map(e=>e[0]); D.prodVals = sorted.map(e=>Math.round(e[1])); }
+  const tCount = Object.keys(ticketMap).length;
+  const tTotal = Object.values(ticketMap).reduce((a,b)=>a+b,0);
+  if (tCount > 0) D.computed.ticketPromedio = tTotal / tCount;
+}
+
+function applyGastos(rows, D) {
+  if (!rows.length) return;
+  const monthly = new Array(12).fill(0);
+  const catMap  = {};
+  rows.forEach(r => {
+    const monto = num(r.monto);
+    const mi    = parseMonthIndex(r.fecha);
+    const cat   = (r.categoria_gasto || '').trim();
+    if (mi >= 0) monthly[mi] += monto;
+    if (cat)     catMap[cat] = (catMap[cat] || 0) + monto;
+  });
+  if (monthly.some(v => v > 0)) D.gastos = monthly.map(v => Math.round(v));
+  const cats = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+  if (cats.length) { D.gastosLabels = cats.map(e=>e[0]); D.gastosVals = cats.map(e=>Math.round(e[1])); }
+}
+
+function applyPersonal(rows, D) {
+  if (!rows.length) return;
+  let totalLabor = 0;
+  rows.forEach(r => { totalLabor += num(r.horas_trabajadas) * num(r.costo_hora); });
+  if (totalLabor > 0) {
+    const idx = D.gastosLabels.findIndex(l => /n[oó]m/i.test(l));
+    if (idx >= 0) D.gastosVals[idx] = Math.round(totalLabor);
+    else { D.gastosLabels.unshift('Nómina'); D.gastosVals.unshift(Math.round(totalLabor)); }
+  }
+}
+
+function applyEncuestas(rows, D) {
+  if (!rows.length) return;
+  const cal = {6:0,7:0,8:0,9:0,10:0};
+  const bNPS = {}, bEsp = {};
+  let gProm=0, gDet=0, gTotal=0, calSum=0, calCnt=0, espSum=0, espCnt=0;
+  rows.forEach(r => {
+    const c   = parseInt(r.calificacion) || 0;
+    const esp = parseInt(r.tiempo_espera) || 0;
+    const suc = (r.sucursal || '').trim();
+    if (c >= 6 && c <= 10) {
+      cal[c]++; gTotal++; calSum += c; calCnt++;
+      if (c >= 9) gProm++; else if (c === 6) gDet++;
+      if (suc) {
+        if (!bNPS[suc]) bNPS[suc] = {prom:0,det:0,total:0};
+        bNPS[suc].total++;
+        if (c >= 9) bNPS[suc].prom++; else if (c === 6) bNPS[suc].det++;
+      }
+    }
+    if (esp > 0) {
+      espSum += esp; espCnt++;
+      if (suc) {
+        if (!bEsp[suc]) bEsp[suc] = {sum:0,count:0};
+        bEsp[suc].sum += esp; bEsp[suc].count++;
+      }
+    }
+  });
+  D.cal = [6,7,8,9,10].map(k => cal[k]||0);
+  const npsOf = b => b ? Math.round((b.prom-b.det)/b.total*100) : null;
+  const espOf = b => b ? Math.round(b.sum/b.count) : null;
+  const centro  = Object.keys(bNPS).find(k => k.toLowerCase().includes('centro'));
+  const angel   = Object.keys(bNPS).find(k => k.toLowerCase().startsWith('angel'));
+  const npsG    = gTotal ? Math.round((gProm-gDet)/gTotal*100) : D.nps[0];
+  D.nps   = [npsG, npsOf(bNPS[centro])??D.nps[1], npsOf(bNPS[angel])??D.nps[2], D.nps[3]];
+  const espG = espCnt ? Math.round(espSum/espCnt) : D.espera[0];
+  const cEsp = centro && bEsp[centro];
+  const aEsp = angel  && bEsp[angel];
+  D.espera = [espG, espOf(cEsp)??D.espera[1], espOf(aEsp)??D.espera[2], D.espera[3]];
+  D.computed.npsGlobal    = npsG;
+  D.computed.calPromedio  = calCnt ? (calSum/calCnt).toFixed(1) : null;
+  D.computed.esperaGlobal = espG;
+}
+
+function applyClientes(rows, D) {
+  if (!rows.length) return;
+  const AGE = [[18,30],[31,40],[41,50],[51,60],[61,120]];
+  const cityMap = {};
+  let visSum=0, visCnt=0, retCnt=0;
+  rows.forEach(r => {
+    const edad   = parseInt(r.edad) || 0;
+    const ciudad = (r.ciudad || '').trim();
+    const vis    = num(r['visitas_año'] || r.visitas_ano || '0');
+    if (ciudad) {
+      if (!cityMap[ciudad]) cityMap[ciudad] = [0,0,0,0,0];
+      const ri = AGE.findIndex(([mn,mx]) => edad >= mn && edad <= mx);
+      if (ri >= 0) cityMap[ciudad][ri]++;
+    }
+    if (vis > 0) { visSum += vis; visCnt++; if (vis > 1) retCnt++; }
+  });
+  const sorted = Object.entries(cityMap)
+    .map(([c,b]) => [c, b, b.reduce((a,x)=>a+x,0)])
+    .sort((a,b) => b[2]-a[2]).slice(0,4);
+  if (sorted.length) {
+    D.demoLabels  = sorted.map(([c,,t]) => `${c}\n(${t})`);
+    D.demoTotals  = sorted.map(([,,t]) => t);
+    D.demoBands   = sorted.map(([,b]) => b);
+  }
+  if (visCnt > 0) {
+    D.computed.visitasPromedio = (visSum/visCnt).toFixed(1);
+    D.computed.retencion       = ((retCnt/visCnt)*100).toFixed(1);
+  }
+}
+
+function applyReservaciones(rows, D) {
+  if (!rows.length) return;
+  const si = v => ['si','sí','1','true'].includes((v||'').trim().toLowerCase());
+  const no = v => ['no','0','false'].includes((v||'').trim().toLowerCase());
+  let total=0, noShows=0;
+  rows.forEach(r => { if (si(r.reservo)) { total++; if (no(r.asistio)) noShows++; } });
+  if (total > 0) D.computed.noShows = ((noShows/total)*100).toFixed(1);
+}
+
+// ── KPI CARD UPDATER ──────────────────────────────────────────
+function updateKPICards(D) {
+  const c = D.computed || {};
+  const set = (id, val, cls) => {
+    const el = document.getElementById(id);
+    if (el && val != null) { el.textContent = val; el.className = 'kpi-value ' + cls; }
+  };
+  if (c.npsGlobal != null) {
+    const v = Math.round(c.npsGlobal);
+    set('kv-nps', v, v >= 40 ? 'green' : v >= 20 ? 'yellow' : 'red');
+  }
+  if (c.ticketPromedio != null) {
+    const v = Math.round(c.ticketPromedio);
+    set('kv-ticket', '$'+v, v >= 290 ? 'green' : 'yellow');
+  }
+  if (c.noShows != null) {
+    const v = parseFloat(c.noShows);
+    set('kv-noshow', v.toFixed(1)+'%', v <= 5 ? 'green' : v <= 10 ? 'yellow' : 'red');
+  }
+  if (c.retencion != null) {
+    const v = parseFloat(c.retencion);
+    set('kv-retencion', v.toFixed(1)+'%', v >= 70 ? 'green' : 'yellow');
+  }
+  if (c.calPromedio != null) {
+    const v = parseFloat(c.calPromedio);
+    set('kv-calificacion', v.toFixed(1), v >= 8.5 ? 'green' : v >= 7 ? 'yellow' : 'red');
+  }
+  if (c.esperaGlobal != null) {
+    const v = Math.round(c.esperaGlobal);
+    set('kv-espera', v+' min', v <= 15 ? 'green' : v <= 20 ? 'yellow' : 'red');
+  }
+  if (c.visitasPromedio != null) {
+    const v = parseFloat(c.visitasPromedio);
+    set('kv-visitas', v.toFixed(1), v >= 6 ? 'green' : 'yellow');
+  }
+}
+
+// ── INSIGHTS UPDATER ──────────────────────────────────────────
+function updateInsights(D) {
+  if (!D.prodLabels || !D.prodLabels.length) return;
+  const top    = D.prodLabels[0];
+  const topVal = D.prodVals[0] || 0;
+  const total  = D.prodVals.reduce((a,b) => a+b, 0);
+  const topPct = total > 0 ? ((topVal/total)*100).toFixed(1) : null;
+  const topK   = (topVal/1000).toFixed(0);
+
+  const sub = document.getElementById('subtitle-top-productos');
+  if (sub && topPct) {
+    sub.textContent = `${top} = ${topPct}% de ventas en muestra ($${topK}K) · Top 7 productos por venta neta`;
+  }
+
+  const ht = document.getElementById('hallazgo-estrella-title');
+  if (ht) {
+    ht.textContent = `Producto líder en ventas: ${top} (${topPct}% de la muestra) — Revisar food cost de categoría`;
+  }
+
+  const hb = document.getElementById('hallazgo-estrella-body');
+  if (hb && topPct) {
+    hb.innerHTML = `<strong>${top}</strong> lidera con el <strong>${topPct}% de las ventas</strong> en la muestra ($${topK}K). Para proteger el margen, calcular su food cost: si supera el benchmark CANIRAC de <strong>32%</strong>, tiene tres palancas: (1) renegociar precio con proveedor por volumen, (2) ajustar precio de venta, (3) crear combo con guarnición de alto margen (postres tienen food cost 23.3%). Reducir food cost de la categoría líder tiene el mayor impacto directo en resultados.`;
+  }
+
+  const ri = document.getElementById('resumen-food-cost');
+  if (ri) {
+    ri.innerHTML = `🔴 Auditar food cost de <strong>${top}</strong> — producto líder en ventas`;
+  }
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+async function fetchSheet(url) {
+  const r = await fetch(`${url}&_t=${Date.now()}`, { cache:'reload' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return parseCSV(await r.text());
+}
+
+async function initDashboard() {
+  showLoader(true);
+
+  const [ventasR, clientesR, gastosR, personalR, encuestasR, reservasR] =
+    await Promise.allSettled(Object.values(URLS).map(fetchSheet));
+
+  const D = JSON.parse(JSON.stringify(DEF));
+  D.computed = {};
+
+  const errors = [];
+  const apply = (result, name, fn) => {
+    if (result.status === 'fulfilled') {
+      try { fn(result.value, D); } catch(e) { errors.push(`${name}: error interno`); }
+    } else {
+      errors.push(`${name}: ${result.reason.message}`);
+    }
+  };
+
+  apply(ventasR,    'Ventas',        applyTransactions);
+  apply(gastosR,    'Gastos',        applyGastos);
+  apply(personalR,  'Personal',      applyPersonal);
+  apply(encuestasR, 'Encuestas',     applyEncuestas);
+  apply(clientesR,  'Clientes',      applyClientes);
+  apply(reservasR,  'Reservaciones', applyReservaciones);
+
+  if (errors.length) showError(errors.join(' · '));
+
+  const loaded = 6 - errors.length;
+  const srcEl = document.getElementById('data-source-badge');
+  if (srcEl) {
+    srcEl.textContent = `${loaded === 6 ? '✅' : '⚠️'} ${loaded}/6 hojas · ${new Date().toLocaleTimeString('es-MX')}`;
+    srcEl.style.color = loaded === 6 ? '#00A86B' : '#E63946';
+  }
+
+  buildCharts(D);
+  updateKPICards(D);
+  updateInsights(D);
+  showLoader(false);
+}
+
+document.addEventListener('DOMContentLoaded', initDashboard);
+</script>
+</body>
+</html>
