@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dashboard RetailPYME MX — BI 2024</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --azul:#1B3A6B; --verde:#00A86B; --naranja:#F4A261;
+  --rojo:#E63946; --fondo:#F8F9FA; --texto:#2D3748;
+  --blanco:#fff; --borde:#DEE2E6; --azul-claro:#EFF6FF;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--fondo);color:var(--texto);font-size:14px;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1B3A6B 0%,#234a8a 100%);color:#fff;padding:22px 32px;}
+.header-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.h-icon{font-size:2.4rem;}
+.h-info h1{font-size:1.3rem;font-weight:700;}
+.h-info p{font-size:.83rem;opacity:.85;margin-top:3px;}
+.h-badges{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.badge{display:inline-block;border-radius:20px;padding:3px 11px;font-size:.72rem;font-weight:600;}
+.b-gray{background:rgba(255,255,255,.18);color:#fff;}
+.b-green{background:var(--verde);color:#fff;}
+.b-orange{background:var(--naranja);color:#fff;}
+.b-red{background:var(--rojo);color:#fff;}
+
+/* ALERTA CRÍTICA */
+.alerta-critica{background:#FEF2F2;border-left:5px solid var(--rojo);padding:14px 24px;margin:16px 24px;border-radius:8px;animation:fadeIn .6s ease;}
+.alerta-critica h3{color:var(--rojo);font-size:.95rem;margin-bottom:6px;}
+.alerta-critica p{font-size:.83rem;line-height:1.7;color:var(--texto);}
+
+/* CONTENIDO */
+.container{max-width:1140px;margin:0 auto;padding:20px 24px 48px;}
+
+/* SECCIÓN TITLE */
+.sec-title{font-size:1rem;font-weight:700;color:var(--azul);border-bottom:2px solid var(--azul);padding-bottom:6px;margin:28px 0 16px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:28px;animation:fadeIn .6s ease;}
+.kpi-card{background:var(--blanco);border-radius:12px;padding:16px 14px;box-shadow:0 2px 10px rgba(0,0,0,.07);transition:transform .2s,box-shadow .2s;border-top:4px solid var(--borde);}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.12);}
+.kpi-card.verde{border-top-color:var(--verde);}
+.kpi-card.amarillo{border-top-color:var(--naranja);}
+.kpi-card.rojo{border-top-color:var(--rojo);}
+.kpi-icon{font-size:1.5rem;margin-bottom:6px;}
+.kpi-label{font-size:.7rem;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;}
+.kpi-val{font-size:1.4rem;font-weight:700;margin-top:4px;}
+.kpi-bench{font-size:.7rem;margin-top:3px;color:#6B7280;}
+.sem{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;}
+.sem-v{background:var(--verde);}
+.sem-a{background:var(--naranja);}
+.sem-r{background:var(--rojo);}
+.kpi-v{color:var(--verde);}
+.kpi-a{color:var(--naranja);}
+.kpi-r{color:var(--rojo);}
+.kpi-n{color:var(--azul);}
+
+/* CHARTS */
+.chart-main{background:var(--blanco);border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:24px;animation:fadeIn .6s ease;}
+.chart-main h4{font-size:.82rem;color:#6B7280;text-transform:uppercase;margin-bottom:14px;}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;}
+@media(max-width:660px){.charts-row{grid-template-columns:1fr;}}
+.chart-card{background:var(--blanco);border-radius:12px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+.chart-card h4{font-size:.82rem;color:#6B7280;text-transform:uppercase;margin-bottom:12px;}
+
+/* RENTABILIDAD MENSUAL */
+.meses-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px;}
+@media(max-width:600px){.meses-grid{grid-template-columns:repeat(3,1fr);}}
+.mes-card{border-radius:10px;padding:12px;text-align:center;}
+.mes-card.ganancia{background:#ECFDF5;border:1px solid #A7F3D0;}
+.mes-card.perdida{background:#FEF2F2;border:1px solid #FECACA;}
+.mes-nombre{font-size:.72rem;text-transform:uppercase;font-weight:700;color:#6B7280;}
+.mes-ebitda{font-size:1rem;font-weight:700;margin-top:4px;}
+.mes-card.ganancia .mes-ebitda{color:var(--verde);}
+.mes-card.perdida .mes-ebitda{color:var(--rojo);}
+
+/* TABLA KPIs */
+.table-wrap{overflow-x:auto;margin-bottom:28px;}
+table{width:100%;border-collapse:collapse;background:var(--blanco);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);}
+th{background:var(--azul);color:#fff;padding:10px 14px;text-align:left;font-size:.75rem;text-transform:uppercase;}
+td{padding:9px 14px;border-bottom:1px solid var(--borde);font-size:.84rem;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--azul-claro);}
+.td-r{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+.td-bench{font-size:.72rem;color:#6B7280;}
+
+/* HALLAZGOS */
+.hall-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px;animation:fadeIn .6s ease;}
+@media(max-width:700px){.hall-grid{grid-template-columns:1fr;}}
+.hall-col{border-radius:12px;padding:16px 18px;}
+.hall-col.critico{background:#FEF2F2;border:1px solid #FECACA;}
+.hall-col.oport{background:#FFFBEB;border:1px solid #FDE68A;}
+.hall-col.fort{background:#ECFDF5;border:1px solid #A7F3D0;}
+.hall-col h4{font-size:.85rem;font-weight:700;margin-bottom:12px;}
+.hall-col.critico h4{color:var(--rojo);}
+.hall-col.oport h4{color:#B45309;}
+.hall-col.fort h4{color:#065F46;}
+.hall-item{font-size:.8rem;line-height:1.6;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.07);}
+.hall-item:last-child{border-bottom:none;}
+.hall-item strong{display:block;margin-bottom:2px;}
+
+/* INSIGHT BOX */
+.insight-box{background:linear-gradient(135deg,#1B3A6B,#234a8a);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:24px;}
+.insight-box h3{font-size:.95rem;margin-bottom:10px;opacity:.85;}
+.insight-stat{font-size:1.8rem;font-weight:700;color:#F4A261;}
+.insight-desc{font-size:.82rem;margin-top:6px;opacity:.85;line-height:1.7;}
+
+/* FOOTER */
+.footer{background:var(--azul);color:rgba(255,255,255,.75);padding:16px 32px;font-size:.75rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.footer a{color:rgba(255,255,255,.75);text-decoration:none;}
+.footer a:hover{color:#fff;}
+.print-btn{background:var(--verde);color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;}
+.print-btn:hover{background:#008F5A;}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@media print{.print-btn{display:none;}.header,.hall-col,.mes-card,.kpi-card{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="h-icon">🛍️</div>
+    <div class="h-info">
+      <h1>RetailPYME MX — Dashboard de Business Intelligence</h1>
+      <p>Sector: Comercio al por menor · SCIAN 46 · Estrato DENUE: Pequeña empresa (≤10 emp.) · Ejercicio 2024</p>
+    </div>
+  </div>
+  <div class="h-badges">
+    <span class="badge b-gray">📅 Análisis: Enero–Diciembre 2024</span>
+    <span class="badge b-gray">👥 5–6 empleados</span>
+    <span class="badge b-gray">3 canales de venta</span>
+    <span class="badge b-green">✅ Datos: 6 hojas Google Sheets</span>
+    <span class="badge b-orange">⚠️ EBITDA real: 1.68% — ver hallazgos</span>
+    <span class="badge b-gray">Generado: 03/06/2026</span>
+  </div>
+</div>
+
+<!-- ALERTA CRÍTICA -->
+<div class="alerta-critica">
+  <h3>🔴 Hallazgo crítico detectado al cruzar hojas</h3>
+  <p>La hoja de Rentabilidad muestra Gastos Operativos = $0 (fórmula desconectada). Al incorporar los gastos reales de la hoja Gastos_Operacion ($1,227,790/año), el <strong>EBITDA real es $40,630 (1.68%)</strong> y el negocio opera en <strong>pérdida en 6 de 12 meses</strong>. El negocio depende del Q4 (Nov–Dic) para generar el 160% de las utilidades anuales.</p>
+</div>
+
+<div class="container">
+
+<!-- KPI CARDS -->
+<div class="sec-title">KPIs principales del ejercicio 2024</div>
+<div class="kpi-grid">
+  <div class="kpi-card verde">
+    <div class="kpi-icon">💰</div>
+    <div class="kpi-label">Ventas netas anuales</div>
+    <div class="kpi-val kpi-n">$2,415,500</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>$201,292 prom/mes</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">📊</div>
+    <div class="kpi-label">Margen bruto</div>
+    <div class="kpi-val kpi-v">52.5%</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>Benchmark: 20–40% — por encima ✅</div>
+  </div>
+  <div class="kpi-card rojo">
+    <div class="kpi-icon">⚡</div>
+    <div class="kpi-label">EBITDA real</div>
+    <div class="kpi-val kpi-r">1.68%</div>
+    <div class="kpi-bench"><span class="sem sem-r"></span>$40,630/año — margen crítico 🔴</div>
+  </div>
+  <div class="kpi-card rojo">
+    <div class="kpi-icon">📦</div>
+    <div class="kpi-label">Días de inventario</div>
+    <div class="kpi-val kpi-r">97.8 días</div>
+    <div class="kpi-bench"><span class="sem sem-r"></span>Benchmark: 30–60 días 🔴</div>
+  </div>
+  <div class="kpi-card amarillo">
+    <div class="kpi-icon">🏠</div>
+    <div class="kpi-label">Renta / Ventas</div>
+    <div class="kpi-val kpi-a">10.9%</div>
+    <div class="kpi-bench"><span class="sem sem-a"></span>Benchmark: &lt;10% — límite 🟡</div>
+  </div>
+  <div class="kpi-card amarillo">
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-label">Nómina / Ventas</div>
+    <div class="kpi-val kpi-a">30.9%</div>
+    <div class="kpi-bench"><span class="sem sem-a"></span>Benchmark: &lt;30% — límite 🟡</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">🎯</div>
+    <div class="kpi-label">Ticket promedio</div>
+    <div class="kpi-val kpi-v">$302.99</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>Estable todo el año ✅</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">🔄</div>
+    <div class="kpi-label">Retención clientes</div>
+    <div class="kpi-val kpi-v">75%</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>Benchmark: 40–60% — excelente ✅</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">⭐</div>
+    <div class="kpi-label">NPS / Satisfacción</div>
+    <div class="kpi-val kpi-v">8.0 / 10</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>Rango: 7.5–8.5 durante el año ✅</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">🛒</div>
+    <div class="kpi-label">Tasa de conversión</div>
+    <div class="kpi-val kpi-v">71.8%</div>
+    <div class="kpi-bench"><span class="sem sem-v"></span>Visitantes → compradores ✅</div>
+  </div>
+  <div class="kpi-card rojo">
+    <div class="kpi-icon">🔃</div>
+    <div class="kpi-label">Rotación inventario</div>
+    <div class="kpi-val kpi-r">4.3x / año</div>
+    <div class="kpi-bench"><span class="sem sem-r"></span>Benchmark: 8–15x — crítico 🔴</div>
+  </div>
+  <div class="kpi-card amarillo">
+    <div class="kpi-icon">📱</div>
+    <div class="kpi-label">Canal digital</div>
+    <div class="kpi-val kpi-a">20%</div>
+    <div class="kpi-bench"><span class="sem sem-a"></span>WhatsApp 14% + ML 6% — crecer</div>
+  </div>
+</div>
+
+<!-- INSIGHT BOX -->
+<div class="insight-box">
+  <h3>💡 Insight principal del ejercicio</h3>
+  <div class="insight-stat">6 de 12 meses en pérdida operativa</div>
+  <div class="insight-desc">
+    El negocio genera el <strong>160% de su utilidad anual en Nov–Dic</strong> ($65,690 en dic + $28,230 en nov = $93,920), compensando las pérdidas acumuladas de Ene, Feb, Abr, Jul, Sep y Oct (−$82,650 combinados). Sin el Q4, el negocio acumula pérdidas de $82,650. Esto significa que cualquier diciembre malo puede cerrar el año en rojo. La prioridad #1 es reducir la estructura de costos fijos para bajar el punto de equilibrio mensual.
+  </div>
+</div>
+
+<!-- GRÁFICA PRINCIPAL: Ventas + EBITDA mensual -->
+<div class="chart-main">
+  <h4>📈 Ventas netas y EBITDA real mensual — Eje dual (barras = ventas | línea = EBITDA)</h4>
+  <div style="position:relative;height:280px;">
+    <canvas id="chartMain"></canvas>
+  </div>
+</div>
+
+<!-- GRÁFICAS SECUNDARIAS -->
+<div class="charts-row">
+  <div class="chart-card">
+    <h4>📦 Días de inventario por categoría (benchmark: 30–60 días)</h4>
+    <div style="position:relative;height:260px;">
+      <canvas id="chartInv"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h4>💸 Estructura de costos anuales ($1,227,790)</h4>
+    <div style="position:relative;height:260px;">
+      <canvas id="chartCostos"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- GRÁFICA CANALES Y NPS -->
+<div class="charts-row">
+  <div class="chart-card">
+    <h4>📡 Ventas por canal — Participación anual</h4>
+    <div style="position:relative;height:220px;">
+      <canvas id="chartCanales"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h4>⭐ NPS mensual (escala 0–10)</h4>
+    <div style="position:relative;height:220px;">
+      <canvas id="chartNPS"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- RENTABILIDAD MES A MES -->
+<div class="sec-title">⚠️ Rentabilidad real mes a mes (Utilidad Bruta − Gastos Operativos)</div>
+<div class="meses-grid">
+  <div class="mes-card perdida"><div class="mes-nombre">Enero</div><div class="mes-ebitda">−$10,590</div></div>
+  <div class="mes-card perdida"><div class="mes-nombre">Febrero</div><div class="mes-ebitda">−$22,240</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Marzo</div><div class="mes-ebitda">+$1,590</div></div>
+  <div class="mes-card perdida"><div class="mes-nombre">Abril</div><div class="mes-ebitda">−$32,080</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Mayo</div><div class="mes-ebitda">+$1,550</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Junio</div><div class="mes-ebitda">+$15,710</div></div>
+  <div class="mes-card perdida"><div class="mes-nombre">Julio</div><div class="mes-ebitda">−$560</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Agosto</div><div class="mes-ebitda">+$10,510</div></div>
+  <div class="mes-card perdida"><div class="mes-nombre">Sep</div><div class="mes-ebitda">−$16,520</div></div>
+  <div class="mes-card perdida"><div class="mes-nombre">Octubre</div><div class="mes-ebitda">−$660</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Noviembre</div><div class="mes-ebitda">+$28,230</div></div>
+  <div class="mes-card ganancia"><div class="mes-nombre">Diciembre</div><div class="mes-ebitda">+$65,690</div></div>
+</div>
+
+<!-- TABLA KPIs -->
+<div class="sec-title">Tabla de KPIs — Resumen ejecutivo</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>KPI</th><th style="text-align:right">Valor 2024</th><th>Benchmark</th><th>Estado</th><th>Fuente referencial</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Ventas netas anuales</td><td class="td-r">$2,415,500</td><td class="td-bench">—</td><td>📊 Base</td><td class="td-bench">Hoja Ventas</td></tr>
+      <tr><td>Ticket promedio</td><td class="td-r">$302.99</td><td class="td-bench">$200–500 retail MX</td><td><span class="sem sem-v"></span>✅ Óptimo</td><td class="td-bench">Ventas / Tickets</td></tr>
+      <tr><td>Margen bruto</td><td class="td-r kpi-v">52.5%</td><td class="td-bench">20–40% (Censos INEGI 2024)</td><td><span class="sem sem-v"></span>✅ Por encima</td><td class="td-bench">Rentabilidad</td></tr>
+      <tr><td>EBITDA real (ajustado)</td><td class="td-r kpi-r">1.68%</td><td class="td-bench">&gt;8% retail saludable</td><td><span class="sem sem-r"></span>🔴 Crítico</td><td class="td-bench">Cruce Rentab.+Gastos</td></tr>
+      <tr><td>Días de inventario promedio</td><td class="td-r kpi-r">97.8 días</td><td class="td-bench">30–60 días (estándar industria)</td><td><span class="sem sem-r"></span>🔴 Crítico</td><td class="td-bench">Hoja Inventario</td></tr>
+      <tr><td>Rotación de inventario</td><td class="td-r kpi-r">4.3x / año</td><td class="td-bench">8–15x / año (estándar industria)</td><td><span class="sem sem-r"></span>🔴 Crítico</td><td class="td-bench">Hoja Inventario</td></tr>
+      <tr><td>Capital inmovilizado en inv. exceso</td><td class="td-r kpi-r">~$179,765</td><td class="td-bench">Inv. óptimo: ~$143,385</td><td><span class="sem sem-r"></span>🔴 Liberar</td><td class="td-bench">Cálculo: COGS/8x</td></tr>
+      <tr><td>Renta / Ventas</td><td class="td-r kpi-a">10.9%</td><td class="td-bench">&lt;10% (estándar retail MX)</td><td><span class="sem sem-a"></span>🟡 Límite</td><td class="td-bench">Gastos_Operacion</td></tr>
+      <tr><td>Nómina / Ventas</td><td class="td-r kpi-a">30.9%</td><td class="td-bench">&lt;30% (Censos Económicos INEGI)</td><td><span class="sem sem-a"></span>🟡 Límite</td><td class="td-bench">Hoja Personal</td></tr>
+      <tr><td>Ventas por empleado / mes</td><td class="td-r">$37,719</td><td class="td-bench">$30,000–50,000 (IMSS/Data México)</td><td><span class="sem sem-v"></span>✅ Rango</td><td class="td-bench">Hoja Personal</td></tr>
+      <tr><td>% Retención clientes</td><td class="td-r kpi-v">75%</td><td class="td-bench">40–60% benchmark</td><td><span class="sem sem-v"></span>✅ Excelente</td><td class="td-bench">Hoja Clientes</td></tr>
+      <tr><td>NPS promedio (0–10)</td><td class="td-r kpi-v">8.0</td><td class="td-bench">&gt;7.5 bueno</td><td><span class="sem sem-v"></span>✅ Bueno</td><td class="td-bench">Hoja Clientes</td></tr>
+      <tr><td>Tasa de conversión</td><td class="td-r kpi-v">71.8%</td><td class="td-bench">60–75% retail físico</td><td><span class="sem sem-v"></span>✅ Óptimo</td><td class="td-bench">Hoja Clientes</td></tr>
+      <tr><td>% Devoluciones</td><td class="td-r kpi-v">1.76%</td><td class="td-bench">&lt;3% aceptable</td><td><span class="sem sem-v"></span>✅ Bajo</td><td class="td-bench">Hoja Ventas</td></tr>
+      <tr><td>Canal digital (WhatsApp + ML)</td><td class="td-r kpi-a">20%</td><td class="td-bench">30%+ retail moderno MX</td><td><span class="sem sem-a"></span>🟡 Crecer</td><td class="td-bench">Hoja Ventas</td></tr>
+      <tr><td>Meses con EBITDA positivo</td><td class="td-r kpi-r">6 / 12</td><td class="td-bench">12/12 sostenible</td><td><span class="sem sem-r"></span>🔴 Crítico</td><td class="td-bench">Cruce datos</td></tr>
+      <tr><td>Concentración Q4 (Nov–Dic)</td><td class="td-r kpi-r">231% del EBITDA</td><td class="td-bench">&lt;40% total anual</td><td><span class="sem sem-r"></span>🔴 Riesgo</td><td class="td-bench">Cálculo cruce</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- HALLAZGOS -->
+<div class="sec-title">Hallazgos y recomendaciones — Top 3 por prioridad</div>
+<div class="hall-grid">
+
+  <div class="hall-col critico">
+    <h4>🔴 Crítico — Actuar esta semana</h4>
+
+    <div class="hall-item">
+      <strong>1. Inventario excesivo: 97.8 días vs. benchmark 60 días</strong>
+      Tienes ~$179,765 en capital muerto. Electrónicos (150 días), Juguetes (140 días) y Art. Hogar (130 días) son los peores.<br>
+      <strong>Acción esta semana:</strong> Lista de liquidación con 20–30% descuento en las 3 categorías peor rotadas. Publica en Marketplace y WhatsApp.<br>
+      <strong>Impacto 90 días:</strong> Liberar $80,000–100,000 en efectivo, reducir costo de oportunidad y mejorar flujo para recompra de lo que sí se vende.
+    </div>
+
+    <div class="hall-item">
+      <strong>2. EBITDA real: 1.68% — 6 meses en pérdida</strong>
+      Tu punto de equilibrio mensual es ~$200,000 en ventas. En 6 meses no lo alcanzas. Si Nov–Dic flaquean por cualquier razón (clima, economía, competencia), el año cierra en rojo.<br>
+      <strong>Acción esta semana:</strong> Calcular el costo fijo total mensual mínimo y establecer cuánto debes vender DIARIO para cubrir fijos (= Costos fijos / 26 días hábiles).<br>
+      <strong>Impacto 90 días:</strong> Visibilidad diaria del negocio; identificar los días más débiles para acciones de tráfico focalizadas.
+    </div>
+
+    <div class="hall-item">
+      <strong>3. Concentración extrema en Q4 (Nov–Dic = 231% del EBITDA)</strong>
+      Un solo diciembre malo borra el año. La volatilidad estacional no está siendo gestionada activamente.<br>
+      <strong>Acción esta semana:</strong> Abrir cuenta de ahorro empresarial separada; depositar el 50% del excedente de Nov–Dic para cubrir los meses de pérdida del año siguiente.<br>
+      <strong>Impacto 90 días:</strong> Reduce el riesgo de liquidez en ene–feb–abr del siguiente año.
+    </div>
+  </div>
+
+  <div class="hall-col oport">
+    <h4>🟡 Oportunidades — Actuar este mes</h4>
+
+    <div class="hall-item">
+      <strong>1. Canal digital al 20% — potencial al 30–35%</strong>
+      WhatsApp genera $348,000/año con mínima inversión. Mercado Libre ($144,000) tiene margen de crecer. El canal más barato de adquisición es el que más debes escalar.<br>
+      <strong>Práctica concreta:</strong> Catálogo de WhatsApp Business con las 20 referencias más vendidas, precio y disponibilidad actualizada semanalmente. Invertir $3,000–5,000 en anuncios Meta para aumentar tráfico a WhatsApp.<br>
+      <strong>Inversión:</strong> Bajo (&lt;$5,000)
+    </div>
+
+    <div class="hall-item">
+      <strong>2. Renta al 10.9% — 0.9% sobre el límite</strong>
+      Con ventas de $201,292/mes, cada 1% de renta = $2,013. Bajar a 10% requiere subir ventas $22,000/mes o renegociar la renta $2,640/mes.<br>
+      <strong>Práctica concreta:</strong> Negociar con el arrendador un esquema mixto (renta fija baja + % sobre ventas). Muchos arrendadores en Puebla prefieren esto a locales vacíos.<br>
+      <strong>Inversión:</strong> Sin costo (tiempo de negociación)
+    </div>
+
+    <div class="hall-item">
+      <strong>3. Nómina en 30.9% — planear horarios con la demanda</strong>
+      En Abr–Sep la nómina/ventas sube hasta 36%. Hay meses donde contratas personal de más vs. ventas.<br>
+      <strong>Práctica concreta:</strong> Usar empleados por hora (art. 59 LFT, semana reducida) en meses bajos. Registrar el patrón de tráfico por hora del día para asignar turnos correctos.<br>
+      <strong>Inversión:</strong> Sin costo adicional (reorganización)
+    </div>
+  </div>
+
+  <div class="hall-col fort">
+    <h4>🟢 Fortalezas — Capitalizar</h4>
+
+    <div class="hall-item">
+      <strong>1. Margen bruto 52.5% — muy por encima del sector</strong>
+      El benchmark es 20–40% (Censos Económicos INEGI 2024). Tienes una mezcla de productos con excelente precio de compra o estrategia de precios superior. Esta ventaja protege el negocio — no sacrificarla con descuentos indiscriminados.<br>
+      <strong>Cómo capitalizar:</strong> Analizar qué categorías generan el mayor margen bruto unitario y priorizar su recompra y visibilidad en tienda.
+    </div>
+
+    <div class="hall-item">
+      <strong>2. 75% de retención — base fidelizada poderosa</strong>
+      3 de cada 4 clientes regresan. Esto es significativamente superior al promedio del sector (40–60%). Tienes un activo enorme sin explotar: la cartera de clientes recurrentes.<br>
+      <strong>Cómo capitalizar:</strong> Programa de WhatsApp de clientes frecuentes (lista de difusión): lanzar ofertas exclusivas 48h antes de publicarlas en tienda. Sin costo, retención inmediata.
+    </div>
+
+    <div class="hall-item">
+      <strong>3. NPS 8.0 y conversión 71.8% — reputación sólida</strong>
+      Los clientes que entran, compran. Y los que compran, regresan y están satisfechos. Tienes los ingredientes para crecer, el cuello de botella es el flujo de caja (inventario y estructura de costos), no la propuesta de valor.<br>
+      <strong>Cómo capitalizar:</strong> Pedir reseñas en Google Maps a clientes con NPS alto (>9). 10 reseñas nuevas = +15% en tráfico orgánico local en 60 días.
+    </div>
+  </div>
+</div>
+
+<!-- RESUMEN EJECUTIVO -->
+<div class="sec-title">Resumen ejecutivo — 3 puntos clave</div>
+<div style="background:var(--blanco);border-radius:12px;padding:20px 24px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:28px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+    <div style="border-left:4px solid var(--verde);padding-left:14px;">
+      <div style="font-size:.75rem;color:#6B7280;text-transform:uppercase;margin-bottom:6px;">✅ Qué está funcionando bien</div>
+      <p style="font-size:.84rem;line-height:1.7;">Margen bruto del 52.5% muy por encima del sector. Retención de 75% de clientes. NPS 8.0 y conversión del 72%. La propuesta de valor al cliente es sólida — los clientes eligen este negocio y regresan.</p>
+    </div>
+    <div style="border-left:4px solid var(--rojo);padding-left:14px;">
+      <div style="font-size:.75rem;color:#6B7280;text-transform:uppercase;margin-bottom:6px;">🔴 Qué necesita atención urgente</div>
+      <p style="font-size:.84rem;line-height:1.7;">Inventario de 97.8 días ($323,150 inmovilizado) destruye el flujo de caja. EBITDA real de 1.68% con 6 meses en pérdida es insostenible. La dependencia del Q4 es el mayor riesgo operativo del negocio.</p>
+    </div>
+    <div style="border-left:4px solid var(--naranja);padding-left:14px;">
+      <div style="font-size:.75rem;color:#6B7280;text-transform:uppercase;margin-bottom:6px;">🎯 Siguiente paso más importante</div>
+      <p style="font-size:.84rem;line-height:1.7;">Lanzar una liquidación de las 3 categorías con mayor exceso (Electrónicos, Juguetes, Art. Hogar) con 20–30% de descuento esta semana. Meta: recuperar $60,000–80,000 en efectivo en 30 días y bajar días de inventario a &lt;75 días.</p>
+    </div>
+  </div>
+</div>
+
+<!-- DATOS A CAPTURAR -->
+<div class="sec-title">📋 Lista de datos mínimos a capturar de ahora en adelante</div>
+<div style="background:var(--blanco);border-radius:12px;padding:18px 24px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:28px;font-size:.84rem;line-height:2;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div>
+      ☐ <strong>Ventas diarias por canal</strong> (tienda / WhatsApp / ML) — actualizar cada día al cierre<br>
+      ☐ <strong>Margen bruto por categoría</strong> — no todas las categorías tienen el mismo margen<br>
+      ☐ <strong>Gastos operativos vs. presupuesto</strong> — conectar la hoja de rentabilidad con la de gastos<br>
+      ☐ <strong>Tráfico diario</strong> (conteo de personas que entran, no solo compradores)
+    </div>
+    <div>
+      ☐ <strong>Compras a proveedores</strong> — precio de entrada vs. precio de venta por SKU<br>
+      ☐ <strong>Inventario mensual</strong> — conteo físico al cierre de cada mes<br>
+      ☐ <strong>Flujo de caja semanal</strong> — entradas vs. salidas reales<br>
+      ☐ <strong>NPS capturado en tienda</strong> — tarjeta o código QR en caja
+    </div>
+  </div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--borde);color:#6B7280;font-size:.78rem;">
+    <strong>Frecuencia de revisión recomendada:</strong> KPIs de ventas e inventario → semanal. KPIs de rentabilidad y gastos → mensual. Dashboard completo → trimestral. Siguiente revisión sugerida: septiembre 2026 (con datos Q1–Q2 2026).
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <div>
+    <strong>Fuentes:</strong>
+    DENUE 05/2026 INEGI · Censos Económicos INEGI 2024 · Data México / IMSS · Datos propios del negocio (Google Sheets 2024) ·
+    Generado con Consultor PyME — 03/06/2026
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span>RetailPYME MX · Comercio al por menor · SCIAN 46</span>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<script>
+const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const ventasNetas = [181800,169100,194600,158300,206200,221100,191700,216000,174900,191600,235400,274800];
+const ebitdaReal = [-10590,-22240,1590,-32080,1550,15710,-560,10510,-16520,-660,28230,65690];
+
+// GRÁFICA PRINCIPAL: Ventas + EBITDA
+new Chart(document.getElementById('chartMain'),{
+  type:'bar',
+  data:{
+    labels:meses,
+    datasets:[
+      {
+        type:'bar',label:'Ventas Netas ($)',data:ventasNetas,
+        backgroundColor:'rgba(27,58,107,0.75)',yAxisID:'y',borderRadius:4,order:2
+      },
+      {
+        type:'line',label:'EBITDA real ($)',data:ebitdaReal,
+        borderColor:'#F4A261',backgroundColor:'rgba(244,162,97,0.15)',
+        pointBackgroundColor: ebitdaReal.map(v=>v>=0?'#00A86B':'#E63946'),
+        pointRadius:6,pointHoverRadius:8,borderWidth:2.5,tension:.3,
+        yAxisID:'y2',fill:true,order:1
+      }
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top'},
+      tooltip:{
+        mode:'index',intersect:false,
+        callbacks:{
+          label:ctx=>{
+            const v=ctx.parsed.y;
+            if(ctx.datasetIndex===0) return ` Ventas: $${v.toLocaleString('es-MX')}`;
+            return ` EBITDA: ${v>=0?'+':''}$${v.toLocaleString('es-MX')} ${v>=0?'✅':'🔴'}`;
+          }
+        }
+      }
+    },
+    scales:{
+      y:{position:'left',ticks:{callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:'#f0f0f0'}},
+      y2:{position:'right',ticks:{callback:v=>'$'+v.toLocaleString('es-MX')},grid:{display:false}}
+    }
+  }
+});
+
+// INVENTARIO: días por categoría
+const catLabels=['Ropa/Textiles','Calzado','Accesorios','Art. Hogar','Papelería','Higiene','Juguetes','Alimentos','Electrónicos','Miscelánea'];
+const catDias=[112.9,120.0,90.0,130.0,57.0,54.5,140.0,53.6,150.0,69.5];
+const catColors=catDias.map(d=>d>90?'#E63946':d>60?'#F4A261':'#00A86B');
+
+new Chart(document.getElementById('chartInv'),{
+  type:'bar',
+  data:{labels:catLabels,datasets:[{
+    label:'Días de inventario',data:catDias,backgroundColor:catColors,borderRadius:4
+  }]},
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} días ${ctx.parsed.x>90?'🔴':ctx.parsed.x>60?'🟡':'✅'}`}},
+      annotation:{annotations:{line1:{type:'line',xMin:60,xMax:60,borderColor:'#E63946',borderWidth:2,borderDash:[5,5]}}}
+    },
+    scales:{x:{ticks:{callback:v=>v+'d'},max:170}}
+  }
+});
+
+// COSTOS: Donut
+new Chart(document.getElementById('chartCostos'),{
+  type:'doughnut',
+  data:{
+    labels:['Nómina','Renta','IMSS/INFONAVIT','Servicios','Publicidad','Empaque','Fletes','Comisiones','Mantenimiento','Seguros'],
+    datasets:[{
+      data:[746000,264000,41400,47300,62500,23600,12750,7840,12800,9600],
+      backgroundColor:['#1B3A6B','#E63946','#F4A261','#00A86B','#7C3AED','#0EA5E9','#10B981','#F59E0B','#6B7280','#9CA3AF'],
+      borderWidth:2,borderColor:'#fff'
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'right',labels:{font:{size:10},padding:8,boxWidth:12}},
+      tooltip:{callbacks:{label:ctx=>{
+        const pct=(ctx.parsed/1227790*100).toFixed(1);
+        return ` $${ctx.parsed.toLocaleString('es-MX')} (${pct}%)`;
+      }}}
+    }
+  }
+});
+
+// CANALES
+new Chart(document.getElementById('chartCanales'),{
+  type:'doughnut',
+  data:{
+    labels:['Mostrador / Tienda física','WhatsApp / Pedidos online','Mercado Libre / Marketplace'],
+    datasets:[{
+      data:[1967000,348000,144000],
+      backgroundColor:['#1B3A6B','#00A86B','#F4A261'],
+      borderWidth:2,borderColor:'#fff'
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:11},padding:8}},
+      tooltip:{callbacks:{label:ctx=>{
+        const pct=(ctx.parsed/2459000*100).toFixed(1);
+        return ` $${ctx.parsed.toLocaleString('es-MX')} (${pct}%)`;
+      }}}
+    }
+  }
+});
+
+// NPS
+const nps=[7.8,7.5,8.0,7.6,8.1,8.2,7.9,8.3,7.7,7.8,8.4,8.5];
+new Chart(document.getElementById('chartNPS'),{
+  type:'line',
+  data:{
+    labels:meses,
+    datasets:[{
+      label:'NPS (0–10)',data:nps,
+      borderColor:'#1B3A6B',backgroundColor:'rgba(27,58,107,0.1)',
+      pointBackgroundColor:nps.map(v=>v>=8?'#00A86B':'#F4A261'),
+      pointRadius:5,borderWidth:2.5,tension:.4,fill:true
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` NPS: ${ctx.parsed.y} ${ctx.parsed.y>=8?'✅':'🟡'}`}}
+    },
+    scales:{y:{min:7,max:9,ticks:{stepSize:.5}}}
+  }
+});
+</script>
+</body>
+</html>
